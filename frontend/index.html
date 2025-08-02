@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSS Marketplace - Speed Skating Equipment Exchange</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="images/logo0.jpg" alt="GSS Logo" class="logo">
+                <span class="brand-text">GSS Marketplace</span>
+            </div>
+            <div class="nav-menu">
+                <button class="nav-btn" id="loginBtn">Login</button>
+                <button class="nav-btn primary" id="registerBtn">Register</button>
+                <div class="user-menu hidden" id="userMenu">
+                    <span class="user-name" id="userName"></span>
+                    <button class="nav-btn" id="profileBtn">Profile</button>
+                    <button class="nav-btn" id="adminBtn" style="display: none;">Admin</button>
+                    <button class="nav-btn" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Speed Skating Equipment Exchange</h1>
+            <p>Buy, sell, and trade quality speed skating gear within our trusted community</p>
+            <button class="cta-btn" id="browseBtn">Browse Equipment</button>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose GSS Marketplace?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Trusted Community</h3>
+                    <p>Exclusive access for verified club members only</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-search"></i>
+                    <h3>Easy Discovery</h3>
+                    <p>Find exactly what you need with smart filtering</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-handshake"></i>
+                    <h3>Direct Contact</h3>
+                    <p>Connect directly with sellers for smooth transactions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Welcome Back</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn primary">Login</button>
+                <p class="form-link">Don't have an account? <a href="#" id="showRegister">Register here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Join GSS Marketplace</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <input type="text" id="registerName" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="registerEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="registerPassword" placeholder="Password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <input type="tel" id="registerPhone" placeholder="Phone (optional)">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="registerLocation" placeholder="Location (optional)">
+                </div>
+                <button type="submit" class="btn primary">Register</button>
+                <p class="form-link">Already have an account? <a href="#" id="showLogin">Login here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <h2>Admin Dashboard</h2>
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="whitelist">Email Whitelist</button>
+                <button class="tab-btn" data-tab="users">User Management</button>
+            </div>
+            
+            <div class="tab-content" id="whitelistTab">
+                <div class="admin-section">
+                    <h3>Add Email to Whitelist</h3>
+                    <form id="addEmailForm">
+                        <div class="form-row">
+                            <input type="email" id="whitelistEmail" placeholder="Email address" required>
+                            <input type="text" id="whitelistNotes" placeholder="Notes (optional)">
+                            <button type="submit" class="btn primary">Add Email</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="admin-section">
+                    <h3>Whitelisted Emails</h3>
+                    <div id="whitelistContainer" class="data-table"></div>
+                </div>
+            </div>
+
+            <div class="tab-content hidden" id="usersTab">
+                <div class="admin-section">
+                    <h3>Registered Users</h3>
+                    <div id="usersContainer" class="data-table"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
