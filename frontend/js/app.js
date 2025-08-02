@@ -7,8 +7,8 @@ class GSS_Marketplace {
 
     async init() {
         // Initialize Supabase
-        const supabaseUrl = 'YOUR_SUPABASE_URL';
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        const supabaseUrl = 'https://sbrbspsocmicyoszjagk.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNicmJzcHNvY21pY3lvc3pqYWdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMDg4NzYsImV4cCI6MjA2OTY4NDg3Nn0.J-n60orF3HtMSEIbPLzNOBiTs-I-s0JJivkhkCdm_p0';
         this.supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         this.setupEventListeners();
