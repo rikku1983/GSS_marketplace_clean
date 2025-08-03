@@ -263,15 +263,41 @@ class GSS_Marketplace {
 
             container.innerHTML = data.map(item => `
                 <div class="whitelist-item">
-                    <strong>${item.email}</strong>
-                    ${item.notes ? `<span> - ${item.notes}</span>` : ''}
-                    <small>Added: ${new Date(item.added_at).toLocaleDateString()}</small>
+                    <div class="whitelist-info">
+                        <strong>${item.email}</strong>
+                        ${item.notes ? `<span> - ${item.notes}</span>` : ''}
+                        <small>Added: ${new Date(item.added_at).toLocaleDateString()}</small>
+                    </div>
+                    <button class="btn-delete" onclick="app.deleteWhitelistEmail('${item.email}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             `).join('');
         } catch (error) {
             console.error('Error loading whitelist:', error);
             const container = document.getElementById('whitelistContainer');
             container.innerHTML = '<p class="error">Error loading whitelist data</p>';
+        }
+    }
+
+    async deleteWhitelistEmail(email) {
+        if (!confirm(`Remove "${email}" from whitelist?\n\nThis will prevent them from registering new accounts.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await this.supabase
+                .from('email_whitelist')
+                .delete()
+                .eq('email', email);
+
+            if (error) throw error;
+
+            this.showNotification(`Email "${email}" removed from whitelist`, 'success');
+            this.loadWhitelist(); // Refresh the list
+        } catch (error) {
+            console.error('Error deleting email:', error);
+            this.showNotification('Error removing email from whitelist', 'error');
         }
     }
 
@@ -642,5 +668,5 @@ class GSS_Marketplace {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-    new GSS_Marketplace();
+    window.app = new GSS_Marketplace();
 });
