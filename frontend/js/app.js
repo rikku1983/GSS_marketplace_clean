@@ -25,7 +25,9 @@ class GSS_Marketplace {
         document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
 
-        // Form submissions
+        // Form submissions - ADD THESE MISSING LISTENERS
+        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
         
         // Post card clicks - delegate event listener
@@ -56,11 +58,6 @@ class GSS_Marketplace {
                 const modal = e.target.closest('.modal');
                 this.hideModal(modal.id);
             });
-        });
-
-        // Admin tabs
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
 
         // Close modal on outside click
