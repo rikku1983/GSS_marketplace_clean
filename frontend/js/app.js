@@ -514,22 +514,22 @@ class GSS_Marketplace {
         loading.style.display = 'none';
         
         if (!posts || posts.length === 0) {
-            grid.innerHTML = '<p>No posts available yet. Be the first to create one!</p>';
+            grid.innerHTML = '<p class="no-posts">No posts available yet. Be the first to create one!</p>';
             return;
         }
 
         grid.innerHTML = posts.map(post => `
-            <div class="post-card" data-post-id="${post.post_id}" style="cursor: pointer; border: 1px solid #ddd; padding: 15px; margin: 10px; background: white;">
+            <div class="post-card" data-post-id="${post.post_id}">
                 <div class="post-image">
                     ${post.thumbnail_url ? 
-                        `<img src="${post.thumbnail_url}" alt="${post.title}" style="width: 100%; height: 150px; object-fit: cover;">` : 
-                        '<div class="no-image" style="width: 100%; height: 150px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>'
+                        `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
+                        '<div class="no-image"><i class="fas fa-image"></i></div>'
                     }
                 </div>
                 <div class="post-content">
                     <h3 class="post-title">${post.title}</h3>
-                    <p class="post-price" style="font-weight: bold; color: #2c5aa0;">$${post.price}</p>
-                    <p class="post-condition">${post.condition}</p>
+                    <p class="post-price">$${post.price}</p>
+                    <span class="post-condition">${post.condition}</span>
                     <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
                     <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
                 </div>
