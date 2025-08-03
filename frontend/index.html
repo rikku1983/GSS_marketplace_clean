@@ -144,6 +144,60 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>My Profile</h2>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="profileName">Full Name</label>
+                    <input type="text" id="profileName" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileEmail">Email</label>
+                    <input type="email" id="profileEmail" placeholder="Email" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="profilePhone">Phone</label>
+                    <input type="tel" id="profilePhone" placeholder="Phone (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="profileLocation">Location</label>
+                    <input type="text" id="profileLocation" placeholder="Location (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="currentPassword">Current Password (required to save changes)</label>
+                    <input type="password" id="currentPassword" placeholder="Enter current password">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn primary">Update Profile</button>
+                    <button type="button" class="btn secondary" id="changePasswordBtn">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Change Password</h2>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <input type="password" id="oldPassword" placeholder="Current Password" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="newPasswordChange" placeholder="New Password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
+                </div>
+                <button type="submit" class="btn primary">Update Password</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 

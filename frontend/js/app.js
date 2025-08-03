@@ -20,8 +20,10 @@ class GSS_Marketplace {
         document.getElementById('loginBtn').addEventListener('click', () => this.showModal('loginModal'));
         document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
         document.getElementById('adminBtn').addEventListener('click', () => this.showModal('adminModal'));
+        document.getElementById('profileBtn').addEventListener('click', () => this.showProfileModal());
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
         document.getElementById('forgotPasswordLink').addEventListener('click', (e) => this.handleForgotPassword(e));
+        document.getElementById('changePasswordBtn').addEventListener('click', () => this.showChangePasswordModal());
 
         // Modal switching
         document.getElementById('showRegister').addEventListener('click', (e) => {
@@ -40,6 +42,8 @@ class GSS_Marketplace {
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
+        document.getElementById('profileForm').addEventListener('submit', (e) => this.handleProfileUpdate(e));
+        document.getElementById('changePasswordForm').addEventListener('submit', (e) => this.handlePasswordChange(e));
 
         // Close modals
         document.querySelectorAll('.close').forEach(closeBtn => {
@@ -316,6 +320,119 @@ class GSS_Marketplace {
 
             this.showNotification('Password reset email sent! Check your inbox.', 'success');
             this.hideModal('loginModal');
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    async showProfileModal() {
+        if (!this.currentUser) return;
+        
+        // Load current profile data
+        const { data: profile } = await this.supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', this.currentUser.id)
+            .single();
+
+        if (profile) {
+            document.getElementById('profileName').value = profile.user_name || '';
+            document.getElementById('profileEmail').value = profile.email || '';
+            document.getElementById('profilePhone').value = profile.phone || '';
+            document.getElementById('profileLocation').value = profile.location || '';
+        }
+        
+        this.showModal('profileModal');
+    }
+
+    showChangePasswordModal() {
+        this.hideModal('profileModal');
+        this.showModal('changePasswordModal');
+    }
+
+    async handleProfileUpdate(e) {
+        e.preventDefault();
+        const currentPassword = document.getElementById('currentPassword').value;
+        
+        if (!currentPassword) {
+            this.showNotification('Please enter your current password to save changes', 'error');
+            return;
+        }
+
+        try {
+            // Verify current password
+            const { error: authError } = await this.supabase.auth.signInWithPassword({
+                email: this.currentUser.email,
+                password: currentPassword
+            });
+
+            if (authError) {
+                this.showNotification('Current password is incorrect', 'error');
+                return;
+            }
+
+            // Update profile
+            const { error } = await this.supabase
+                .from('user_profiles')
+                .update({
+                    user_name: document.getElementById('profileName').value,
+                    phone: document.getElementById('profilePhone').value,
+                    location: document.getElementById('profileLocation').value
+                })
+                .eq('user_id', this.currentUser.id);
+
+            if (error) throw error;
+
+            this.showNotification('Profile updated successfully!', 'success');
+            this.hideModal('profileModal');
+            
+            // Update UI with new name
+            document.getElementById('userName').textContent = document.getElementById('profileName').value;
+            
+            // Clear password field
+            document.getElementById('currentPassword').value = '';
+            
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    async handlePasswordChange(e) {
+        e.preventDefault();
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPasswordChange').value;
+        const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+        if (newPassword !== confirmPassword) {
+            this.showNotification('New passwords do not match', 'error');
+            return;
+        }
+
+        try {
+            // Verify old password
+            const { error: authError } = await this.supabase.auth.signInWithPassword({
+                email: this.currentUser.email,
+                password: oldPassword
+            });
+
+            if (authError) {
+                this.showNotification('Current password is incorrect', 'error');
+                return;
+            }
+
+            // Update password
+            const { error } = await this.supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (error) throw error;
+
+            this.showNotification('Password changed successfully!', 'success');
+            this.hideModal('changePasswordModal');
+            
+            // Clear form
+            document.getElementById('changePasswordForm').reset();
+            
         } catch (error) {
             this.showNotification(error.message, 'error');
         }
