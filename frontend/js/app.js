@@ -24,8 +24,18 @@ class GSS_Marketplace {
         document.getElementById('profileBtn').addEventListener('click', () => this.showProfileModal());
         document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => this.handleForgotPassword(e));
-        document.getElementById('changePasswordBtn').addEventListener('click', () => this.showChangePasswordModal());
+
+        // Form submissions
+        document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
+        
+        // Post card clicks - delegate event listener
+        document.addEventListener('click', (e) => {
+            const postCard = e.target.closest('.post-card');
+            if (postCard) {
+                const postId = postCard.dataset.postId;
+                this.showPostDetails(postId);
+            }
+        });
 
         // Modal switching
         document.getElementById('showRegister').addEventListener('click', (e) => {
@@ -39,14 +49,6 @@ class GSS_Marketplace {
             this.hideModal('registerModal');
             this.showModal('loginModal');
         });
-
-        // Form submissions
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
-        document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
-        document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
-        document.getElementById('profileForm').addEventListener('submit', (e) => this.handleProfileUpdate(e));
-        document.getElementById('changePasswordForm').addEventListener('submit', (e) => this.handlePasswordChange(e));
-        document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
 
         // Close modals
         document.querySelectorAll('.close').forEach(closeBtn => {
@@ -520,22 +522,97 @@ class GSS_Marketplace {
         }
 
         grid.innerHTML = posts.map(post => `
-            <div class="post-card" data-post-id="${post.post_id}">
+            <div class="post-card" data-post-id="${post.post_id}" style="cursor: pointer; border: 1px solid #ddd; padding: 15px; margin: 10px; background: white;">
                 <div class="post-image">
                     ${post.thumbnail_url ? 
-                        `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
-                        '<div class="no-image"><i class="fas fa-image"></i></div>'
+                        `<img src="${post.thumbnail_url}" alt="${post.title}" style="width: 100%; height: 150px; object-fit: cover;">` : 
+                        '<div class="no-image" style="width: 100%; height: 150px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>'
                     }
                 </div>
                 <div class="post-content">
                     <h3 class="post-title">${post.title}</h3>
-                    <p class="post-price">$${post.price}</p>
+                    <p class="post-price" style="font-weight: bold; color: #2c5aa0;">$${post.price}</p>
                     <p class="post-condition">${post.condition}</p>
                     <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
                     <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
                 </div>
             </div>
         `).join('');
+    }
+
+    async showPostDetails(postId) {
+        try {
+            const { data: post, error } = await this.supabase
+                .from('marketplace_posts')
+                .select(`
+                    *,
+                    user_profiles(user_name, email, phone, location)
+                `)
+                .eq('post_id', postId)
+                .single();
+
+            if (error) throw error;
+
+            const content = document.getElementById('postDetailsContent');
+            content.innerHTML = `
+                <div class="post-details">
+                    <div class="post-header">
+                        <h2>${post.title}</h2>
+                        <span class="post-price" style="font-size: 24px; font-weight: bold; color: #2c5aa0;">$${post.price}</span>
+                    </div>
+                    
+                    <div class="post-info">
+                        <div class="info-row">
+                            <strong>Category:</strong> ${post.category.replace('-', ' ')}
+                        </div>
+                        ${post.brand ? `<div class="info-row"><strong>Brand:</strong> ${post.brand}</div>` : ''}
+                        ${post.size ? `<div class="info-row"><strong>Size:</strong> ${post.size}</div>` : ''}
+                        <div class="info-row">
+                            <strong>Condition:</strong> ${post.condition}
+                        </div>
+                        <div class="info-row">
+                            <strong>Status:</strong> ${post.status}
+                        </div>
+                        <div class="info-row">
+                            <strong>Posted:</strong> ${new Date(post.created_at).toLocaleDateString()}
+                        </div>
+                    </div>
+
+                    ${post.description ? `
+                        <div class="post-description">
+                            <h3>Description</h3>
+                            <p>${post.description}</p>
+                        </div>
+                    ` : ''}
+
+                    <div class="seller-info">
+                        <h3>Seller Information</h3>
+                        <div class="seller-details">
+                            <p><strong>Name:</strong> ${post.user_profiles?.user_name || 'Unknown'}</p>
+                            <p><strong>Contact:</strong> ${post.contact_method}</p>
+                            ${post.user_profiles?.location ? `<p><strong>Location:</strong> ${post.user_profiles.location}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="contact-actions" style="margin-top: 20px;">
+                        <button class="btn primary" onclick="window.location.href='mailto:${post.user_profiles?.email || ''}?subject=Interest in ${post.title}'">
+                            <i class="fas fa-envelope"></i> Email Seller
+                        </button>
+                        ${post.user_profiles?.phone ? `
+                            <button class="btn" onclick="window.location.href='tel:${post.user_profiles.phone}'">
+                                <i class="fas fa-phone"></i> Call Seller
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            this.showModal('postDetailsModal');
+            
+        } catch (error) {
+            console.error('Error loading post details:', error);
+            this.showNotification('Error loading post details', 'error');
+        }
     }
 }
 
