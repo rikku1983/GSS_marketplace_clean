@@ -319,20 +319,37 @@ class GSS_Marketplace {
     }
 
     async loadUsers() {
-        const { data, error } = await this.supabase
-            .from('user_profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error } = await this.supabase
+                .from('user_profiles')
+                .select(`
+                    *,
+                    marketplace_posts(count)
+                `)
+                .order('created_at', { ascending: false });
 
-        if (!error && data) {
+            if (error) throw error;
+
             const container = document.getElementById('usersContainer');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="no-data">No users yet.</p>';
+                return;
+            }
+
             container.innerHTML = data.map(user => `
                 <div class="user-item">
-                    <strong>${user.user_name}</strong> (${user.email})
-                    <span>Role: ${user.role}</span>
-                    <small>Joined: ${new Date(user.created_at).toLocaleDateString()}</small>
+                    <div class="user-info">
+                        <strong>${user.user_name}</strong> (${user.email})
+                        <span class="user-role ${user.role}">${user.role}</span>
+                        <small>Posts: ${user.marketplace_posts?.length || 0} | Joined: ${new Date(user.created_at).toLocaleDateString()}</small>
+                    </div>
                 </div>
             `).join('');
+        } catch (error) {
+            console.error('Error loading users:', error);
+            const container = document.getElementById('usersContainer');
+            container.innerHTML = '<p class="error">Error loading user data</p>';
         }
     }
 
