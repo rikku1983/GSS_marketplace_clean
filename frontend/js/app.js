@@ -13,6 +13,7 @@ class GSS_Marketplace {
 
         this.setupEventListeners();
         await this.checkAuthState();
+        await this.loadPosts();
     }
 
     setupEventListeners() {
@@ -154,6 +155,9 @@ class GSS_Marketplace {
             // Create profile if it doesn't exist
             await this.createUserProfile(user);
         }
+        
+        // Refresh posts after login
+        await this.loadPosts();
     }
 
     async createUserProfile(user) {
@@ -205,6 +209,9 @@ class GSS_Marketplace {
         document.getElementById('adminBtn').style.display = 'none';
         
         this.showNotification('Logged out successfully', 'info');
+        
+        // Refresh posts after logout
+        await this.loadPosts();
     }
 
     async handleAddEmail(e) {
@@ -472,11 +479,63 @@ class GSS_Marketplace {
             this.hideModal('createPostModal');
             document.getElementById('createPostForm').reset();
             
-            console.log('Created post:', data[0]);
+            // Refresh posts to show the new one
+            await this.loadPosts();
             
         } catch (error) {
             this.showNotification(error.message, 'error');
         }
+    }
+
+    async loadPosts() {
+        try {
+            const { data: posts, error } = await this.supabase
+                .from('marketplace_posts')
+                .select(`
+                    *,
+                    user_profiles(user_name)
+                `)
+                .eq('status', 'available')
+                .order('created_at', { ascending: false })
+                .limit(12);
+
+            if (error) throw error;
+
+            this.displayPosts(posts);
+        } catch (error) {
+            console.error('Error loading posts:', error);
+            document.getElementById('postsLoading').textContent = 'Error loading posts';
+        }
+    }
+
+    displayPosts(posts) {
+        const grid = document.getElementById('postsGrid');
+        const loading = document.getElementById('postsLoading');
+        
+        loading.style.display = 'none';
+        
+        if (!posts || posts.length === 0) {
+            grid.innerHTML = '<p>No posts available yet. Be the first to create one!</p>';
+            return;
+        }
+
+        grid.innerHTML = posts.map(post => `
+            <div class="post-card" data-post-id="${post.post_id}">
+                <div class="post-image">
+                    ${post.thumbnail_url ? 
+                        `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
+                        '<div class="no-image"><i class="fas fa-image"></i></div>'
+                    }
+                </div>
+                <div class="post-content">
+                    <h3 class="post-title">${post.title}</h3>
+                    <p class="post-price">$${post.price}</p>
+                    <p class="post-condition">${post.condition}</p>
+                    <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
+                    <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
+                </div>
+            </div>
+        `).join('');
     }
 }
 
