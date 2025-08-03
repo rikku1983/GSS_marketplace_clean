@@ -20,7 +20,7 @@ class GSS_Marketplace {
         // Modal controls
         document.getElementById('loginBtn').addEventListener('click', () => this.showModal('loginModal'));
         document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
-        document.getElementById('adminBtn').addEventListener('click', () => this.showModal('adminModal'));
+        document.getElementById('adminBtn').addEventListener('click', () => this.showAdminModal());
         document.getElementById('profileBtn').addEventListener('click', () => this.showProfileModal());
         document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
@@ -246,13 +246,21 @@ class GSS_Marketplace {
     }
 
     async loadWhitelist() {
-        const { data, error } = await this.supabase
-            .from('email_whitelist')
-            .select('*')
-            .order('added_at', { ascending: false });
+        try {
+            const { data, error } = await this.supabase
+                .from('email_whitelist')
+                .select('*')
+                .order('added_at', { ascending: false });
 
-        if (!error && data) {
+            if (error) throw error;
+
             const container = document.getElementById('whitelistContainer');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="no-data">No whitelisted emails yet.</p>';
+                return;
+            }
+
             container.innerHTML = data.map(item => `
                 <div class="whitelist-item">
                     <strong>${item.email}</strong>
@@ -260,6 +268,10 @@ class GSS_Marketplace {
                     <small>Added: ${new Date(item.added_at).toLocaleDateString()}</small>
                 </div>
             `).join('');
+        } catch (error) {
+            console.error('Error loading whitelist:', error);
+            const container = document.getElementById('whitelistContainer');
+            container.innerHTML = '<p class="error">Error loading whitelist data</p>';
         }
     }
 
@@ -619,6 +631,12 @@ class GSS_Marketplace {
             console.error('Error loading post details:', error);
             this.showNotification('Error loading post details', 'error');
         }
+    }
+
+    async showAdminModal() {
+        this.showModal('adminModal');
+        // Ensure whitelist tab is active and load data immediately
+        this.switchTab('whitelist');
     }
 }
 
