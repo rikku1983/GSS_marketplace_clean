@@ -25,11 +25,20 @@ class GSS_Marketplace {
         document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
 
-        // Form submissions - ADD THESE MISSING LISTENERS
+        // Form submissions
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
+        document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
         
+        // Admin tab switching
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-btn')) {
+                const tabName = e.target.dataset.tab;
+                this.switchTab(tabName);
+            }
+        });
+
         // Post card clicks - delegate event listener
         document.addEventListener('click', (e) => {
             const postCard = e.target.closest('.post-card');
