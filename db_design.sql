@@ -2,6 +2,7 @@ CREATE TABLE public.email_whitelist (
   email_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   email character varying NOT NULL UNIQUE,
   added_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
   notes text,
   CONSTRAINT email_whitelist_pkey PRIMARY KEY (email_id)
 );
@@ -52,4 +53,12 @@ CREATE TABLE public.post_images (
   CONSTRAINT post_images_pkey PRIMARY KEY (image_id),
   CONSTRAINT post_images_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.marketplace_posts(post_id)
 );
+
+-- Add price validation
+ALTER TABLE public.marketplace_posts 
+ADD CONSTRAINT marketplace_posts_price_positive CHECK (price >= 0);
+
+-- Add photos_count validation
+ALTER TABLE public.marketplace_posts 
+ADD CONSTRAINT marketplace_posts_photos_count_valid CHECK (photos_count >= 0);
 
