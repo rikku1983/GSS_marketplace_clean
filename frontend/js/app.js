@@ -21,6 +21,7 @@ class GSS_Marketplace {
         document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
         document.getElementById('adminBtn').addEventListener('click', () => this.showModal('adminModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => this.handleForgotPassword(e));
 
         // Modal switching
         document.getElementById('showRegister').addEventListener('click', (e) => {
@@ -295,6 +296,29 @@ class GSS_Marketplace {
         setTimeout(() => {
             notification.classList.remove('show');
         }, 4000);
+    }
+
+    async handleForgotPassword(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        
+        if (!email) {
+            this.showNotification('Please enter your email address first', 'error');
+            return;
+        }
+
+        try {
+            const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`
+            });
+
+            if (error) throw error;
+
+            this.showNotification('Password reset email sent! Check your inbox.', 'success');
+            this.hideModal('loginModal');
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
     }
 }
 
