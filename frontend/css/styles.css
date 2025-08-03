@@ -1,3 +1,16 @@
+:root {
+  --primary-color: #2d5a27;      /* Dark green */
+  --primary-light: #4a7c59;     /* Medium green */
+  --primary-dark: #1a3d1a;      /* Very dark green */
+  --accent-color: #7cb342;      /* Light green accent */
+  --success-color: #4caf50;     /* Success green */
+  --background: #f1f8e9;        /* Very light green background */
+  --card-background: #ffffff;
+  --text-primary: #2e2e2e;
+  --text-secondary: #666666;
+  --border-color: #e8f5e8;      /* Light green border */
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -7,8 +20,8 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    color: #333;
-    background: #f8f9fa;
+    color: var(--text-primary);
+    background: var(--background);
 }
 
 .container {
@@ -51,7 +64,7 @@ body {
 .brand-text {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: var(--primary-color);
 }
 
 .nav-menu {
@@ -62,9 +75,9 @@ body {
 
 .nav-btn {
     padding: 10px 20px;
-    border: 2px solid #3498db;
+    border: 2px solid var(--primary-color);
     background: transparent;
-    color: #3498db;
+    color: var(--primary-color);
     border-radius: 25px;
     cursor: pointer;
     font-weight: 600;
@@ -72,17 +85,17 @@ body {
 }
 
 .nav-btn:hover {
-    background: #3498db;
+    background: var(--primary-color);
     color: white;
 }
 
 .nav-btn.primary {
-    background: #3498db;
+    background: var(--primary-color);
     color: white;
 }
 
 .nav-btn.primary:hover {
-    background: #2980b9;
+    background: var(--primary-dark);
 }
 
 .user-menu {
@@ -93,7 +106,7 @@ body {
 
 .user-name {
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--primary-color);
 }
 
 .hidden {
@@ -102,7 +115,7 @@ body {
 
 /* Hero Section */
 .hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
     padding: 100px 0;
     text-align: center;
@@ -122,7 +135,7 @@ body {
 
 .cta-btn {
     padding: 15px 40px;
-    background: #e74c3c;
+    background: var(--accent-color);
     color: white;
     border: none;
     border-radius: 30px;
@@ -133,7 +146,7 @@ body {
 }
 
 .cta-btn:hover {
-    background: #c0392b;
+    background: var(--primary-color);
     transform: translateY(-2px);
 }
 
@@ -147,7 +160,7 @@ body {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 50px;
-    color: #2c3e50;
+    color: var(--primary-color);
 }
 
 .features-grid {
@@ -160,7 +173,8 @@ body {
     text-align: center;
     padding: 40px 20px;
     border-radius: 15px;
-    background: #f8f9fa;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
     transition: transform 0.3s ease;
 }
 
@@ -170,14 +184,14 @@ body {
 
 .feature-card i {
     font-size: 3rem;
-    color: #3498db;
+    color: var(--accent-color);
     margin-bottom: 20px;
 }
 
 .feature-card h3 {
     font-size: 1.5rem;
     margin-bottom: 15px;
-    color: #2c3e50;
+    color: var(--primary-color);
 }
 
 /* Modal Styles */
@@ -229,7 +243,7 @@ body {
 
 .modal h2 {
     margin-bottom: 30px;
-    color: #2c3e50;
+    color: var(--primary-color);
     text-align: center;
 }
 
@@ -249,7 +263,7 @@ body {
 
 .form-group input:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--primary-color);
 }
 
 .btn {
@@ -264,12 +278,12 @@ body {
 }
 
 .btn.primary {
-    background: #3498db;
+    background: var(--primary-color);
     color: white;
 }
 
 .btn.primary:hover {
-    background: #2980b9;
+    background: var(--primary-dark);
 }
 
 .form-link {
@@ -279,7 +293,7 @@ body {
 }
 
 .form-link a {
-    color: #3498db;
+    color: var(--primary-color);
     text-decoration: none;
 }
 
