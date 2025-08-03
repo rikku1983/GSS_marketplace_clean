@@ -21,6 +21,7 @@ class GSS_Marketplace {
         document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
         document.getElementById('adminBtn').addEventListener('click', () => this.showModal('adminModal'));
         document.getElementById('profileBtn').addEventListener('click', () => this.showProfileModal());
+        document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
         document.getElementById('forgotPasswordLink').addEventListener('click', (e) => this.handleForgotPassword(e));
         document.getElementById('changePasswordBtn').addEventListener('click', () => this.showChangePasswordModal());
@@ -44,6 +45,7 @@ class GSS_Marketplace {
         document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
         document.getElementById('profileForm').addEventListener('submit', (e) => this.handleProfileUpdate(e));
         document.getElementById('changePasswordForm').addEventListener('submit', (e) => this.handlePasswordChange(e));
+        document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
 
         // Close modals
         document.querySelectorAll('.close').forEach(closeBtn => {
@@ -432,6 +434,45 @@ class GSS_Marketplace {
             
             // Clear form
             document.getElementById('changePasswordForm').reset();
+            
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
+    }
+
+    async handleCreatePost(e) {
+        e.preventDefault();
+        
+        if (!this.currentUser) {
+            this.showNotification('Please log in to create a post', 'error');
+            return;
+        }
+
+        try {
+            const postData = {
+                title: document.getElementById('postTitle').value,
+                category: document.getElementById('postCategory').value,
+                brand: document.getElementById('postBrand').value || null,
+                size: document.getElementById('postSize').value || null,
+                condition: document.getElementById('postCondition').value,
+                price: parseFloat(document.getElementById('postPrice').value),
+                description: document.getElementById('postDescription').value || null,
+                contact_method: document.getElementById('postContact').value,
+                user_id: this.currentUser.id
+            };
+
+            const { data, error } = await this.supabase
+                .from('marketplace_posts')
+                .insert(postData)
+                .select();
+
+            if (error) throw error;
+
+            this.showNotification('Post created successfully!', 'success');
+            this.hideModal('createPostModal');
+            document.getElementById('createPostForm').reset();
+            
+            console.log('Created post:', data[0]);
             
         } catch (error) {
             this.showNotification(error.message, 'error');

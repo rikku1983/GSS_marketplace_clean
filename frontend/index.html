@@ -20,6 +20,7 @@
                 <button class="nav-btn primary" id="registerBtn">Register</button>
                 <div class="user-menu hidden" id="userMenu">
                     <span class="user-name" id="userName"></span>
+                    <button class="nav-btn" id="createPostBtn">Create Post</button>
                     <button class="nav-btn" id="profileBtn">Profile</button>
                     <button class="nav-btn" id="adminBtn" style="display: none;">Admin</button>
                     <button class="nav-btn" id="logoutBtn">Logout</button>
@@ -194,6 +195,64 @@
                     <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
                 </div>
                 <button type="submit" class="btn primary">Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div class="modal" id="createPostModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create New Post</h2>
+            <form id="createPostForm">
+                <div class="form-group">
+                    <label for="postTitle">Title *</label>
+                    <input type="text" id="postTitle" placeholder="e.g., Speed Skates Size 10" required>
+                </div>
+                <div class="form-group">
+                    <label for="postCategory">Category *</label>
+                    <select id="postCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="skates-and-blades">Skates & Blades</option>
+                        <option value="protective-gear">Protective Gear</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="training-equipment">Training Equipment</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="postBrand">Brand</label>
+                    <input type="text" id="postBrand" placeholder="e.g., Bont, Viking, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="postSize">Size</label>
+                    <input type="number" id="postSize" placeholder="e.g., 10, 42, etc." step="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="postCondition">Condition *</label>
+                    <select id="postCondition" required>
+                        <option value="">Select Condition</option>
+                        <option value="new">New</option>
+                        <option value="like-new">Like New</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="postPrice">Price ($) *</label>
+                    <input type="number" id="postPrice" placeholder="0.00" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="postDescription">Description</label>
+                    <textarea id="postDescription" placeholder="Describe the item, its condition, any defects, etc." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="postContact">Contact Method *</label>
+                    <input type="text" id="postContact" placeholder="Email, phone, or preferred contact method" required>
+                </div>
+                <button type="submit" class="btn primary">Create Post</button>
             </form>
         </div>
     </div>
