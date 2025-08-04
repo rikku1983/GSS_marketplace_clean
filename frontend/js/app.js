@@ -876,7 +876,7 @@ class GSS_Marketplace {
             // Load existing photos
             const { data: photos, error: photoError } = await this.supabase
                 .from('post_images')
-                .select('storage_path, display_order')
+                .select('*')  // Select all fields to preserve data
                 .eq('post_id', postId)
                 .order('display_order');
 
@@ -888,10 +888,21 @@ class GSS_Marketplace {
             this.editUploadedPhotos = (photos || []).map(photo => ({
                 url: this.supabase.storage.from('post-images').getPublicUrl(photo.storage_path).data.publicUrl,
                 path: photo.storage_path,
-                name: photo.storage_path.split('/').pop()
+                name: photo.storage_path.split('/').pop(),
+                id: photo.image_id,  // Store the database ID
+                originalData: photo  // Store original data for comparison
             }));
             
-            this.editThumbnailIndex = 0; // First photo as thumbnail
+            // Find thumbnail index based on thumbnail_url
+            if (post.thumbnail_url && this.editUploadedPhotos.length > 0) {
+                const thumbnailPath = post.thumbnail_url.split('post-images/')[1];
+                const thumbnailIndex = this.editUploadedPhotos.findIndex(photo => 
+                    photo.path.includes(thumbnailPath)
+                );
+                this.editThumbnailIndex = thumbnailIndex >= 0 ? thumbnailIndex : 0;
+            } else {
+                this.editThumbnailIndex = 0;
+            }
 
             // Populate form fields
             document.getElementById('editPostTitle').value = post.title;
@@ -922,6 +933,7 @@ class GSS_Marketplace {
         const postId = document.getElementById('editPostForm').dataset.postId;
         
         try {
+            // Only update the thumbnail URL
             const updateData = {
                 title: document.getElementById('editPostTitle').value,
                 category: document.getElementById('editPostCategory').value,
@@ -938,8 +950,8 @@ class GSS_Marketplace {
                     null
             };
 
-            console.log('Editing post with thumbnail index:', this.editThumbnailIndex); // Debug
-            console.log('Selected photo path:', this.editUploadedPhotos[this.editThumbnailIndex]?.path); // Debug
+            console.log('Editing post with thumbnail index:', this.editThumbnailIndex);
+            console.log('Selected photo path:', this.editUploadedPhotos[this.editThumbnailIndex]?.path);
 
             // Update post
             const { error: updateError } = await this.supabase
@@ -949,33 +961,39 @@ class GSS_Marketplace {
 
             if (updateError) throw updateError;
 
-            // Handle photo updates if any photos exist
+            // Don't delete existing photos - just update the display_order to reflect new order
             if (this.editUploadedPhotos.length > 0) {
-                // Delete existing photos from database
-                const { error: deleteError } = await this.supabase
-                    .from('post_images')
-                    .delete()
-                    .eq('post_id', postId);
-
-                if (deleteError) console.error('Delete existing photos error:', deleteError);
-
-                // Insert new photos with correct thumbnail marking
-                const photoInserts = this.editUploadedPhotos.map((photo, index) => ({
-                    post_id: parseInt(postId),
-                    filename: photo.path.split('/').pop(),
-                    original_name: photo.name || `photo_${index + 1}`,
-                    file_size: photo.size || null,
-                    mime_type: this.getMimeType(photo.name || photo.path),
-                    storage_path: photo.path,
-                    display_order: index + 1
-                }));
-
-                const { error: photoError } = await this.supabase
-                    .from('post_images')
-                    .insert(photoInserts);
-
-                if (photoError) {
-                    console.error('Photo insert error:', photoError);
+                for (let i = 0; i < this.editUploadedPhotos.length; i++) {
+                    const photo = this.editUploadedPhotos[i];
+                    
+                    // If photo has an ID, it's an existing photo - update its display_order
+                    if (photo.id) {
+                        const { error: updatePhotoError } = await this.supabase
+                            .from('post_images')
+                            .update({ display_order: i + 1 })
+                            .eq('image_id', photo.id);
+                            
+                        if (updatePhotoError) {
+                            console.error('Error updating photo order:', updatePhotoError);
+                        }
+                    } else {
+                        // New photo - insert it
+                        const { error: insertPhotoError } = await this.supabase
+                            .from('post_images')
+                            .insert({
+                                post_id: parseInt(postId),
+                                filename: photo.path.split('/').pop(),
+                                original_name: photo.name || `photo_${i + 1}`,
+                                file_size: photo.size || null,
+                                mime_type: this.getMimeType(photo.name || photo.path),
+                                storage_path: photo.path,
+                                display_order: i + 1
+                            });
+                            
+                        if (insertPhotoError) {
+                            console.error('Error inserting new photo:', insertPhotoError);
+                        }
+                    }
                 }
             }
 
