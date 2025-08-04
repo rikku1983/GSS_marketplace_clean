@@ -1252,9 +1252,9 @@ class GSS_Marketplace {
         // Generate preview HTML
         grid.innerHTML = photos.map((photo, index) => `
             <div class="photo-preview-item ${index === thumbnailIndex ? 'thumbnail' : ''}" 
-                 onclick="app.setThumbnail(${index}, '${mode}')">
+                 onclick="event.stopPropagation(); app.setThumbnail(${index}, '${mode}')">
                 <img src="${photo.url}" alt="Preview ${index + 1}">
-                <button class="photo-remove-btn" onclick="app.removePhoto(${index}, '${mode}')" type="button">
+                <button class="photo-remove-btn" onclick="event.stopPropagation(); app.removePhoto(${index}, '${mode}')" type="button">
                     ×
                 </button>
             </div>
