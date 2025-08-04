@@ -62,3 +62,7 @@ ADD CONSTRAINT marketplace_posts_price_positive CHECK (price >= 0);
 ALTER TABLE public.marketplace_posts 
 ADD CONSTRAINT marketplace_posts_photos_count_valid CHECK (photos_count >= 0);
 
+-- Change size column from numeric to character varying
+ALTER TABLE public.marketplace_posts 
+ALTER COLUMN size TYPE character varying USING size::character varying;
+

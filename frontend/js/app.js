@@ -567,7 +567,7 @@ class GSS_Marketplace {
                 title: document.getElementById('postTitle').value,
                 category: document.getElementById('postCategory').value,
                 brand: document.getElementById('postBrand').value || null,
-                size: document.getElementById('postSize').value || null,
+                size: document.getElementById('postSize').value || null, // Now accepts text
                 condition: document.getElementById('postCondition').value,
                 price: parseFloat(document.getElementById('postPrice').value),
                 description: document.getElementById('postDescription').value || null,
@@ -932,12 +932,11 @@ class GSS_Marketplace {
         const postId = document.getElementById('editPostForm').dataset.postId;
         
         try {
-            // Only update the thumbnail URL
             const updateData = {
                 title: document.getElementById('editPostTitle').value,
                 category: document.getElementById('editPostCategory').value,
                 brand: document.getElementById('editPostBrand').value || null,
-                size: document.getElementById('editPostSize').value || null,
+                size: document.getElementById('editPostSize').value || null, // Now accepts text
                 condition: document.getElementById('editPostCondition').value,
                 price: parseFloat(document.getElementById('editPostPrice').value),
                 description: document.getElementById('editPostDescription').value || null,
