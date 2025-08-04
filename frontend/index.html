@@ -314,14 +314,33 @@
                     <textarea id="postDescription" placeholder="Describe the item, its condition, any defects, etc." rows="4"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="postImages">Photos (up to 5)</label>
-                    <input type="file" id="postImages" accept="image/*" multiple capture="environment">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>Click to select photos or drag & drop</p>
-                        <small>JPG, PNG, WebP • Max 5MB each • Up to 5 photos</small>
+                    <label>Photos (up to 5):</label>
+                    <div class="photo-upload-container">
+                        <div class="photo-upload-area" id="photoUploadArea">
+                            <div class="upload-placeholder">
+                                <div class="upload-icon">📷</div>
+                                <p>Add photos to your post</p>
+                                <p class="upload-hint">Supports: JPG, PNG, WebP (max 5MB each, up to 5 photos)</p>
+                                <div class="upload-buttons">
+                                    <button type="button" class="btn btn-outline upload-btn mobile-only" onclick="app.openCameraUpload()">
+                                        📷 Take Photo
+                                    </button>
+                                    <button type="button" class="btn btn-outline upload-btn" onclick="app.openGalleryUpload()">
+                                        <span class="mobile-text">🖼️ Choose Photos</span>
+                                        <span class="desktop-text">📁 Select Photos</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="file" id="photoInputCamera" accept="image/*" capture="environment" style="display: none;">
+                            <input type="file" id="photoInputGallery" multiple accept="image/*" style="display: none;">
+                        </div>
+                        <div class="photo-preview-container" id="photoPreviewContainer" style="display: none;">
+                            <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+                            <button type="button" class="btn btn-outline btn-sm" id="addMorePhotosBtn">
+                                ➕ Add More Photos
+                            </button>
+                        </div>
                     </div>
-                    <div id="imagePreviewContainer" class="image-preview-container"></div>
                     <div id="uploadProgress" class="upload-progress hidden">
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
@@ -399,14 +418,33 @@
                     <textarea id="editPostDescription" placeholder="Description (optional)" rows="4"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="editPostImages">Photos (up to 5)</label>
-                    <input type="file" id="editPostImages" accept="image/*" multiple capture="environment">
-                    <div class="upload-area" id="editUploadArea">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>Click to select photos or drag & drop</p>
-                        <small>JPG, PNG, WebP • Max 5MB each • Up to 5 photos</small>
+                    <label>Photos (up to 5):</label>
+                    <div class="photo-upload-container">
+                        <div class="photo-upload-area" id="editPhotoUploadArea">
+                            <div class="upload-placeholder">
+                                <div class="upload-icon">📷</div>
+                                <p>Add photos to your post</p>
+                                <p class="upload-hint">Supports: JPG, PNG, WebP (max 5MB each, up to 5 photos)</p>
+                                <div class="upload-buttons">
+                                    <button type="button" class="btn btn-outline upload-btn mobile-only" onclick="app.openEditCameraUpload()">
+                                        📷 Take Photo
+                                    </button>
+                                    <button type="button" class="btn btn-outline upload-btn" onclick="app.openEditGalleryUpload()">
+                                        <span class="mobile-text">🖼️ Choose Photos</span>
+                                        <span class="desktop-text">📁 Select Photos</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="file" id="editPhotoInputCamera" accept="image/*" capture="environment" style="display: none;">
+                            <input type="file" id="editPhotoInputGallery" multiple accept="image/*" style="display: none;">
+                        </div>
+                        <div class="photo-preview-container" id="editPhotoPreviewContainer" style="display: none;">
+                            <div class="photo-preview-grid" id="editPhotoPreviewGrid"></div>
+                            <button type="button" class="btn btn-outline btn-sm" id="editAddMorePhotosBtn">
+                                ➕ Add More Photos
+                            </button>
+                        </div>
                     </div>
-                    <div id="editImagePreviewContainer" class="image-preview-container"></div>
                     <div id="editUploadProgress" class="upload-progress hidden">
                         <div class="progress-bar">
                             <div class="progress-fill" id="editProgressFill"></div>
