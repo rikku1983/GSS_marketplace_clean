@@ -1046,3 +1046,56 @@ body {
     background: #ccc !important;
     cursor: not-allowed !important;
 }
+
+/* Two-column form layout */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1; /* Spans all columns */
+}
+
+.form-row .form-group {
+    margin-bottom: 20px;
+}
+
+/* Full width elements */
+.full-width {
+    width: 100%;
+    grid-column: 1 / -1;
+}
+
+/* Adjust modal content for better spacing */
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .modal-content {
+        margin: 5% auto;
+        padding: 20px;
+        max-height: 95vh;
+    }
+}
+
+/* Reduce textarea height in two-column layout */
+.form-group.full-width textarea {
+    rows: 3;
+    min-height: 80px;
+}
