@@ -76,6 +76,15 @@ class GSS_Marketplace {
                 this.hideModal(e.target.id);
             }
         });
+
+        // Filter listeners
+        document.getElementById('searchFilter')?.addEventListener('input', () => this.applyFilters());
+        document.getElementById('categoryFilter')?.addEventListener('change', () => this.applyFilters());
+        document.getElementById('conditionFilter')?.addEventListener('change', () => this.applyFilters());
+        document.getElementById('statusFilter')?.addEventListener('change', () => this.applyFilters());
+        document.getElementById('minPrice')?.addEventListener('input', () => this.applyFilters());
+        document.getElementById('maxPrice')?.addEventListener('input', () => this.applyFilters());
+        document.getElementById('clearFilters')?.addEventListener('click', () => this.clearFilters());
     }
 
     async checkAuthState() {
@@ -562,12 +571,12 @@ class GSS_Marketplace {
                     *,
                     user_profiles(user_name)
                 `)
-                .order('created_at', { ascending: false })
-                .limit(12);
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            this.displayPosts(posts);
+            this.allPosts = posts; // Store all posts
+            this.applyFilters(); // Apply current filters
         } catch (error) {
             console.error('Error loading posts:', error);
             document.getElementById('postsLoading').textContent = 'Error loading posts';
@@ -786,6 +795,56 @@ class GSS_Marketplace {
             
         } catch (error) {
             this.showNotification(error.message, 'error');
+        }
+    }
+
+    applyFilters() {
+        if (!this.allPosts) return;
+        
+        const search = document.getElementById('searchFilter')?.value.toLowerCase() || '';
+        const category = document.getElementById('categoryFilter')?.value || '';
+        const condition = document.getElementById('conditionFilter')?.value || '';
+        const status = document.getElementById('statusFilter')?.value || '';
+        const minPrice = parseFloat(document.getElementById('minPrice')?.value) || 0;
+        const maxPrice = parseFloat(document.getElementById('maxPrice')?.value) || Infinity;
+        
+        const filteredPosts = this.allPosts.filter(post => {
+            const matchesSearch = !search || 
+                post.title.toLowerCase().includes(search) ||
+                (post.brand && post.brand.toLowerCase().includes(search));
+            
+            const matchesCategory = !category || post.category === category;
+            const matchesCondition = !condition || post.condition === condition;
+            const matchesStatus = !status || post.status === status;
+            const matchesPrice = post.price >= minPrice && post.price <= maxPrice;
+            
+            return matchesSearch && matchesCategory && matchesCondition && matchesStatus && matchesPrice;
+        });
+        
+        this.displayPosts(filteredPosts);
+        this.updateFilterCount(filteredPosts.length, this.allPosts.length);
+    }
+
+    clearFilters() {
+        document.getElementById('searchFilter').value = '';
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('conditionFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('minPrice').value = '';
+        document.getElementById('maxPrice').value = '';
+        
+        this.applyFilters();
+    }
+
+    updateFilterCount(filtered, total) {
+        const existingCount = document.querySelector('.filter-count');
+        if (existingCount) existingCount.remove();
+        
+        if (filtered !== total) {
+            const countElement = document.createElement('div');
+            countElement.className = 'filter-count';
+            countElement.textContent = `Showing ${filtered} of ${total} posts`;
+            document.querySelector('.filters-container').appendChild(countElement);
         }
     }
 }

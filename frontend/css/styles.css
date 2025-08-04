@@ -744,3 +744,58 @@ body {
 .btn-delete i {
     font-size: 11px;
 }
+
+.filters-container {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr auto;
+    gap: 15px;
+    align-items: center;
+}
+
+.filter-group input,
+.filter-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.price-range {
+    display: flex;
+    gap: 8px;
+}
+
+.price-range input {
+    width: 50%;
+}
+
+@media (max-width: 768px) {
+    .filters-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .price-range {
+        flex-direction: column;
+    }
+    
+    .price-range input {
+        width: 100%;
+    }
+}

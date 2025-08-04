@@ -65,6 +65,52 @@
     <section class="marketplace">
         <div class="container">
             <h2>Latest Equipment</h2>
+            <div class="filters-container">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <input type="text" id="searchFilter" placeholder="Search title or brand...">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                            <option value="skates-and-blades">Skates & Blades</option>
+                            <option value="protective-gear">Protective Gear</option>
+                            <option value="clothing">Clothing</option>
+                            <option value="accessories">Accessories</option>
+                            <option value="training-equipment">Training Equipment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select id="conditionFilter">
+                            <option value="">All Conditions</option>
+                            <option value="new">New</option>
+                            <option value="like-new">Like New</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="available">Available</option>
+                            <option value="pending">Pending</option>
+                            <option value="sold">Sold</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group price-range">
+                        <input type="number" id="minPrice" placeholder="Min $" min="0" step="0.01">
+                        <input type="number" id="maxPrice" placeholder="Max $" min="0" step="0.01">
+                    </div>
+                    
+                    <button id="clearFilters" class="btn secondary">Clear</button>
+                </div>
+            </div>
             <div class="posts-grid" id="postsGrid">
                 <!-- Posts will be loaded here -->
             </div>
