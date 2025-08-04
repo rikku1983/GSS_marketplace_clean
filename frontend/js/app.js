@@ -595,13 +595,12 @@ class GSS_Marketplace {
             if (this.uploadedPhotos.length > 0) {
                 const photoInserts = this.uploadedPhotos.map((photo, index) => ({
                     post_id: post.post_id,
-                    filename: photo.path.split('/').pop(), // Extract filename from path
+                    filename: photo.path.split('/').pop(),
                     original_name: photo.name || `photo_${index + 1}`,
                     file_size: photo.size || null,
                     mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    display_order: index + 1,
-                    is_thumbnail: index === this.thumbnailIndex // Add this field
+                    display_order: index + 1
                 }));
 
                 const { error: photoError } = await this.supabase
@@ -968,8 +967,7 @@ class GSS_Marketplace {
                     file_size: photo.size || null,
                     mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    display_order: index + 1,
-                    is_thumbnail: index === this.editThumbnailIndex // Add this field
+                    display_order: index + 1
                 }));
 
                 const { error: photoError } = await this.supabase
