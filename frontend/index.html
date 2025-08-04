@@ -19,11 +19,28 @@
                 <button class="nav-btn" id="loginBtn">Login</button>
                 <button class="nav-btn primary" id="registerBtn">Register</button>
                 <div class="user-menu hidden" id="userMenu">
-                    <span class="user-name" id="userName"></span>
-                    <button class="nav-btn" id="createPostBtn">Create Post</button>
-                    <button class="nav-btn" id="profileBtn">Profile</button>
-                    <button class="nav-btn" id="adminBtn" style="display: none;">Admin</button>
-                    <button class="nav-btn" id="logoutBtn">Logout</button>
+                    <button class="nav-btn mobile-menu-toggle" id="mobileMenuToggle">
+                        <span class="user-name" id="userName"></span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-menu-dropdown" id="userMenuDropdown">
+                        <button class="nav-btn" id="createPostBtn">
+                            <i class="fas fa-plus"></i>
+                            <span class="btn-text">Create Post</span>
+                        </button>
+                        <button class="nav-btn" id="profileBtn">
+                            <i class="fas fa-user"></i>
+                            <span class="btn-text">Profile</span>
+                        </button>
+                        <button class="nav-btn" id="adminBtn" style="display: none;">
+                            <i class="fas fa-cog"></i>
+                            <span class="btn-text">Admin</span>
+                        </button>
+                        <button class="nav-btn" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="btn-text">Logout</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -34,6 +34,18 @@ class GSS_Marketplace {
         document.getElementById('createPostBtn')?.addEventListener('click', () => this.showModal('createPostModal'));
         document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
 
+        // Mobile menu toggle
+        document.getElementById('mobileMenuToggle')?.addEventListener('click', () => this.toggleMobileMenu());
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const userMenu = document.getElementById('userMenu');
+            const dropdown = document.getElementById('userMenuDropdown');
+            if (!userMenu.contains(e.target) && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        });
+
         // Form submissions
         document.getElementById('loginForm')?.addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('registerForm')?.addEventListener('submit', (e) => this.handleRegister(e));
@@ -404,6 +416,11 @@ class GSS_Marketplace {
         }
     }
 
+    toggleMobileMenu() {
+        const dropdown = document.getElementById('userMenuDropdown');
+        dropdown.classList.toggle('show');
+    }
+    
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         notification.textContent = message;
