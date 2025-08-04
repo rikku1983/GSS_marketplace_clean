@@ -667,21 +667,20 @@ class GSS_Marketplace {
                             null
                     }));
                 
-                // Use first image as thumbnail
-                const thumbnailImage = imagesWithUrls[0];
-                
+                // Use thumbnail_url from the post record, not the first image
                 return {
                     ...post,
-                    thumbnail_url: thumbnailImage?.image_url || post.thumbnail_url || null,
+                    thumbnail_url: post.thumbnail_url || null, // Use the actual thumbnail_url field
                     post_images: imagesWithUrls
                 };
             });
 
             this.allPosts = processedPosts;
-            this.applyFilters();
+            this.displayPosts(processedPosts);
+            
         } catch (error) {
             console.error('Error loading posts:', error);
-            document.getElementById('postsLoading').textContent = 'Error loading posts';
+            this.showNotification('Error loading posts', 'error');
         }
     }
 
