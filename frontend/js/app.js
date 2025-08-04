@@ -806,16 +806,6 @@ class GSS_Marketplace {
                         <p><strong>Posted:</strong> ${new Date(post.created_at).toLocaleDateString()}</p>
                     </div>
 
-                    <div class="contact-actions" style="margin-top: 20px;">
-                        <button class="btn primary" onclick="window.location.href='mailto:${post.user_profiles?.email || ''}?subject=Interest in ${post.title}'">
-                            <i class="fas fa-envelope"></i> Email Seller
-                        </button>
-                        ${post.user_profiles?.phone ? `
-                            <button class="btn" onclick="window.location.href='tel:${post.user_profiles.phone}'">
-                                <i class="fas fa-phone"></i> Call Seller
-                            </button>
-                        ` : ''}
-                    </div>
                 </div>
             `;
 
