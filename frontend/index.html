@@ -278,6 +278,79 @@
         </div>
     </div>
 
+    <!-- Edit Post Modal -->
+    <div id="editPostModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Post</h2>
+            <form id="editPostForm">
+                <input type="hidden" id="editPostId">
+                
+                <div class="form-group">
+                    <input type="text" id="editPostTitle" placeholder="Title" required>
+                </div>
+                
+                <div class="form-group">
+                    <select id="editPostCategory" required>
+                        <option value="">Select Category</option>
+                        <option value="skates-and-blades">Skates & Blades</option>
+                        <option value="protective-gear">Protective Gear</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="training-equipment">Training Equipment</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <input type="text" id="editPostBrand" placeholder="Brand (optional)">
+                </div>
+                
+                <div class="form-group">
+                    <input type="text" id="editPostSize" placeholder="Size (optional)">
+                </div>
+                
+                <div class="form-group">
+                    <select id="editPostCondition" required>
+                        <option value="">Select Condition</option>
+                        <option value="new">New</option>
+                        <option value="like-new">Like New</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <input type="number" id="editPostPrice" placeholder="Price ($)" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <textarea id="editPostDescription" placeholder="Description (optional)" rows="4"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <select id="editPostContact" required>
+                        <option value="">Preferred Contact Method</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="both">Email & Phone</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <select id="editPostStatus" required>
+                        <option value="available">Available</option>
+                        <option value="pending">Pending</option>
+                        <option value="sold">Sold</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn primary">Update Post</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 

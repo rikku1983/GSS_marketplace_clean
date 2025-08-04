@@ -18,19 +18,19 @@ class GSS_Marketplace {
 
     setupEventListeners() {
         // Modal controls
-        document.getElementById('loginBtn').addEventListener('click', () => this.showModal('loginModal'));
-        document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
-        document.getElementById('adminBtn').addEventListener('click', () => this.showAdminModal());
-        document.getElementById('profileBtn').addEventListener('click', () => this.showProfileModal());
-        document.getElementById('createPostBtn').addEventListener('click', () => this.showModal('createPostModal'));
-        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+        document.getElementById('loginBtn')?.addEventListener('click', () => this.showModal('loginModal'));
+        document.getElementById('registerBtn')?.addEventListener('click', () => this.showModal('registerModal'));
+        document.getElementById('adminBtn')?.addEventListener('click', () => this.showAdminModal());
+        document.getElementById('profileBtn')?.addEventListener('click', () => this.showProfileModal());
+        document.getElementById('createPostBtn')?.addEventListener('click', () => this.showModal('createPostModal'));
+        document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
 
         // Form submissions
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
-        document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
-        document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
-        document.getElementById('editPostForm').addEventListener('submit', (e) => this.handleEditPost(e));
-        document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
+        document.getElementById('loginForm')?.addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('registerForm')?.addEventListener('submit', (e) => this.handleRegister(e));
+        document.getElementById('createPostForm')?.addEventListener('submit', (e) => this.handleCreatePost(e));
+        document.getElementById('editPostForm')?.addEventListener('submit', (e) => this.handleEditPost(e));
+        document.getElementById('addEmailForm')?.addEventListener('submit', (e) => this.handleAddEmail(e));
         
         // Admin tab switching
         document.addEventListener('click', (e) => {
@@ -50,20 +50,20 @@ class GSS_Marketplace {
         });
 
         // Modal switching
-        document.getElementById('showRegister').addEventListener('click', (e) => {
+        document.getElementById('showRegister')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.hideModal('loginModal');
             this.showModal('registerModal');
         });
 
-        document.getElementById('showLogin').addEventListener('click', (e) => {
+        document.getElementById('showLogin')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.hideModal('registerModal');
             this.showModal('loginModal');
         });
 
         // Close modals
-        document.querySelectorAll('.close').forEach(closeBtn => {
+        document.querySelectorAll('.close')?.forEach(closeBtn => {
             closeBtn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
                 this.hideModal(modal.id);
