@@ -556,12 +556,6 @@ class GSS_Marketplace {
             return;
         }
 
-        // Prevent submission during upload
-        if (this.isUploading) {
-            this.showNotification('Please wait for photo upload to complete', 'error');
-            return;
-        }
-
         try {
             const postData = {
                 title: document.getElementById('postTitle').value,
@@ -574,7 +568,9 @@ class GSS_Marketplace {
                 contact_method: document.getElementById('postContact').value,
                 user_id: this.currentUser.id,
                 photos_count: this.uploadedPhotos.length,
-                thumbnail_url: this.uploadedPhotos.length > 0 ? this.uploadedPhotos[this.thumbnailIndex]?.url : null
+                thumbnail_url: this.uploadedPhotos.length > 0 ? 
+                    this.supabase.storage.from('post-images').getPublicUrl(this.uploadedPhotos[this.thumbnailIndex]?.path).data.publicUrl : 
+                    null
             };
 
             // Insert post
@@ -590,9 +586,11 @@ class GSS_Marketplace {
             if (this.uploadedPhotos.length > 0) {
                 const photoInserts = this.uploadedPhotos.map((photo, index) => ({
                     post_id: post.post_id,
-                    image_url: photo.url,
+                    filename: photo.path.split('/').pop(), // Extract filename from path
+                    original_name: photo.name || `photo_${index + 1}`,
+                    file_size: photo.size || null,
+                    mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    is_thumbnail: index === this.thumbnailIndex,
                     display_order: index + 1
                 }));
 
@@ -602,7 +600,6 @@ class GSS_Marketplace {
 
                 if (photoError) {
                     console.error('Photo insert error:', photoError);
-                    // Don't fail the whole operation, just log the error
                 }
             }
 
@@ -610,13 +607,28 @@ class GSS_Marketplace {
             this.hideModal('createPostModal');
             document.getElementById('createPostForm').reset();
             this.clearUploadedPhotos('create');
-            
-            // Refresh posts to show the new one
             await this.loadPosts();
             
         } catch (error) {
-            console.error('Create post error:', error);
+            console.error('Error creating post:', error);
             this.showNotification(error.message, 'error');
+        }
+    }
+
+    getMimeType(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        switch (ext) {
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpeg';
+            case 'png':
+                return 'image/png';
+            case 'webp':
+                return 'image/webp';
+            case 'gif':
+                return 'image/gif';
+            default:
+                return 'image/jpeg';
         }
     }
 
@@ -627,22 +639,32 @@ class GSS_Marketplace {
                 .select(`
                     *,
                     user_profiles(user_name),
-                    post_images(image_url, is_thumbnail)
+                    post_images(storage_path, display_order)
                 `)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            // Process posts to get thumbnail URLs - handle missing photos gracefully
             const processedPosts = posts.map(post => {
-                // Handle case where post_images might be null or empty array
                 const postImages = post.post_images || [];
-                const thumbnailImage = postImages.find(img => img.is_thumbnail);
+                
+                // Generate URLs from storage paths and sort by display order
+                const imagesWithUrls = postImages
+                    .sort((a, b) => a.display_order - b.display_order)
+                    .map(img => ({
+                        ...img,
+                        image_url: img.storage_path ? 
+                            this.supabase.storage.from('post-images').getPublicUrl(img.storage_path).data.publicUrl : 
+                            null
+                    }));
+                
+                // Use first image as thumbnail
+                const thumbnailImage = imagesWithUrls[0];
                 
                 return {
                     ...post,
                     thumbnail_url: thumbnailImage?.image_url || post.thumbnail_url || null,
-                    post_images: postImages // Ensure it's always an array
+                    post_images: imagesWithUrls
                 };
             });
 
@@ -710,15 +732,22 @@ class GSS_Marketplace {
                 .select(`
                     *,
                     user_profiles(user_name, email, phone, location),
-                    post_images(image_url, display_order)
+                    post_images(storage_path, display_order)
                 `)
                 .eq('post_id', postId)
                 .single();
 
             if (error) throw error;
 
-            // Handle missing photos gracefully
-            const photos = (post.post_images || []).sort((a, b) => a.display_order - b.display_order);
+            // Generate URLs from storage paths and sort by display order
+            const photos = (post.post_images || [])
+                .sort((a, b) => a.display_order - b.display_order)
+                .map(img => ({
+                    ...img,
+                    image_url: img.storage_path ? 
+                        this.supabase.storage.from('post-images').getPublicUrl(img.storage_path).data.publicUrl : 
+                        null
+                }));
 
             const photoGallery = photos.length > 0 ? `
                 <div class="post-photos">
@@ -814,14 +843,24 @@ class GSS_Marketplace {
             // Load existing photos
             const { data: photos, error: photoError } = await this.supabase
                 .from('post_images')
-                .select('*')
+                .select('storage_path, display_order')
                 .eq('post_id', postId)
                 .order('display_order');
 
-            if (photoError) console.error('Load photos error:', photoError);
+            if (photoError) {
+                console.error('Error loading photos:', photoError);
+            }
 
-            // Populate form
-            document.getElementById('editPostId').value = post.post_id;
+            // Convert existing photos to the format expected by the upload system
+            this.editUploadedPhotos = (photos || []).map(photo => ({
+                url: this.supabase.storage.from('post-images').getPublicUrl(photo.storage_path).data.publicUrl,
+                path: photo.storage_path,
+                name: photo.storage_path.split('/').pop()
+            }));
+            
+            this.editThumbnailIndex = 0; // First photo as thumbnail
+
+            // Populate form fields
             document.getElementById('editPostTitle').value = post.title;
             document.getElementById('editPostCategory').value = post.category;
             document.getElementById('editPostBrand').value = post.brand || '';
@@ -831,53 +870,25 @@ class GSS_Marketplace {
             document.getElementById('editPostDescription').value = post.description || '';
             document.getElementById('editPostContact').value = post.contact_method;
             document.getElementById('editPostStatus').value = post.status;
+            document.getElementById('editPostForm').dataset.postId = postId;
 
-            // Load existing photos into edit array
-            this.editUploadedPhotos = [];
-            this.editThumbnailIndex = 0;
-
-            if (photos && photos.length > 0) {
-                this.editUploadedPhotos = photos.map(photo => ({
-                    url: photo.image_url,
-                    path: photo.storage_path,
-                    name: 'existing',
-                    size: 0,
-                    existing: true // Mark as existing photo
-                }));
-
-                // Find thumbnail index
-                const thumbnailPhoto = photos.find(p => p.is_thumbnail);
-                if (thumbnailPhoto) {
-                    this.editThumbnailIndex = photos.indexOf(thumbnailPhoto);
-                }
-            }
-
+            // Update photo preview
             this.updatePhotoPreview('edit');
+            
+            this.hideModal('postDetailsModal');
             this.showModal('editPostModal');
-
+            
         } catch (error) {
-            console.error('Error loading post for edit:', error);
+            console.error('Error loading post for editing:', error);
             this.showNotification('Error loading post data', 'error');
         }
     }
 
     async handleEditPost(e) {
         e.preventDefault();
+        const postId = document.getElementById('editPostForm').dataset.postId;
         
-        if (!this.currentUser) {
-            this.showNotification('Please log in to edit posts', 'error');
-            return;
-        }
-
-        // Prevent submission during upload
-        if (this.isUploading) {
-            this.showNotification('Please wait for photo upload to complete', 'error');
-            return;
-        }
-
         try {
-            const postId = document.getElementById('editPostId').value;
-            
             const updateData = {
                 title: document.getElementById('editPostTitle').value,
                 category: document.getElementById('editPostCategory').value,
@@ -889,7 +900,9 @@ class GSS_Marketplace {
                 contact_method: document.getElementById('editPostContact').value,
                 status: document.getElementById('editPostStatus').value,
                 photos_count: this.editUploadedPhotos.length,
-                thumbnail_url: this.editUploadedPhotos.length > 0 ? this.editUploadedPhotos[this.editThumbnailIndex]?.url : null
+                thumbnail_url: this.editUploadedPhotos.length > 0 ? 
+                    this.supabase.storage.from('post-images').getPublicUrl(this.editUploadedPhotos[this.editThumbnailIndex]?.path).data.publicUrl : 
+                    null
             };
 
             // Update post
@@ -902,7 +915,7 @@ class GSS_Marketplace {
 
             // Handle photo updates if any new photos were added
             if (this.editUploadedPhotos.length > 0) {
-                // Delete existing photos from database (but keep storage files for now)
+                // Delete existing photos from database
                 const { error: deleteError } = await this.supabase
                     .from('post_images')
                     .delete()
@@ -913,9 +926,11 @@ class GSS_Marketplace {
                 // Insert new photos
                 const photoInserts = this.editUploadedPhotos.map((photo, index) => ({
                     post_id: parseInt(postId),
-                    image_url: photo.url,
+                    filename: photo.path.split('/').pop(),
+                    original_name: photo.name || `photo_${index + 1}`,
+                    file_size: photo.size || null,
+                    mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    is_thumbnail: index === this.editThumbnailIndex,
                     display_order: index + 1
                 }));
 
@@ -931,12 +946,10 @@ class GSS_Marketplace {
             this.showNotification('Post updated successfully!', 'success');
             this.hideModal('editPostModal');
             this.clearUploadedPhotos('edit');
-            
-            // Refresh posts
             await this.loadPosts();
             
         } catch (error) {
-            console.error('Edit post error:', error);
+            console.error('Error updating post:', error);
             this.showNotification(error.message, 'error');
         }
     }
