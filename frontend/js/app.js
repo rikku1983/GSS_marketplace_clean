@@ -100,6 +100,10 @@ class GSS_Marketplace {
         document.getElementById('minPrice')?.addEventListener('input', () => this.applyFilters());
         document.getElementById('maxPrice')?.addEventListener('input', () => this.applyFilters());
         document.getElementById('clearFilters')?.addEventListener('click', () => this.clearFilters());
+
+        // Storage management buttons
+        document.getElementById('refreshStorageBtn')?.addEventListener('click', () => this.refreshStorageStats());
+        document.getElementById('cleanupOrphansBtn')?.addEventListener('click', () => this.cleanupOrphanedPhotos());
     }
 
     async checkAuthState() {
@@ -343,6 +347,8 @@ class GSS_Marketplace {
             this.loadWhitelist();
         } else if (tabName === 'users') {
             this.loadUsers();
+        } else if (tabName === 'storage') {
+            this.refreshStorageStats();
         }
     }
 
@@ -804,8 +810,8 @@ class GSS_Marketplace {
 
     async showAdminModal() {
         this.showModal('adminModal');
-        // Ensure whitelist tab is active and load data immediately
-        this.switchTab('whitelist');
+        // Start with storage tab to show the new functionality
+        this.switchTab('storage');
     }
 
     async deletePost(postId) {
@@ -814,12 +820,36 @@ class GSS_Marketplace {
         }
 
         try {
+            // First, get all photos for this post
+            const { data: photos, error: photoError } = await this.supabase
+                .from('post_images')
+                .select('storage_path')
+                .eq('post_id', postId);
+
+            if (photoError) {
+                console.error('Error getting photos for deletion:', photoError);
+            }
+
+            // Delete the post (this will cascade delete photos due to foreign key)
             const { error } = await this.supabase
                 .from('marketplace_posts')
                 .delete()
                 .eq('post_id', postId);
 
             if (error) throw error;
+
+            // Delete photos from storage
+            if (photos && photos.length > 0) {
+                const filePaths = photos.map(photo => photo.storage_path);
+                const { error: storageError } = await this.supabase.storage
+                    .from('post-images')
+                    .remove(filePaths);
+
+                if (storageError) {
+                    console.error('Error deleting photos from storage:', storageError);
+                    // Don't fail the whole operation if storage cleanup fails
+                }
+            }
 
             this.showNotification('Post deleted successfully', 'success');
             await this.loadPosts(); // Refresh the posts
@@ -1330,6 +1360,168 @@ class GSS_Marketplace {
             </div>
         `;
         document.body.appendChild(modal);
+    }
+
+    async refreshStorageStats() {
+        try {
+            // Show loading state
+            document.getElementById('totalPhotosCount').textContent = 'Loading...';
+            document.getElementById('dbPhotosCount').textContent = 'Loading...';
+            document.getElementById('orphanPhotosCount').textContent = 'Loading...';
+            document.getElementById('storageUsed').textContent = 'Loading...';
+            
+            // Get all files from storage
+            const { data: storageFiles, error: storageError } = await this.supabase.storage
+                .from('post-images')
+                .list('posts', {
+                    limit: 1000,
+                    sortBy: { column: 'name', order: 'asc' }
+                });
+
+            if (storageError) throw storageError;
+
+            // Get all photos from database
+            const { data: dbPhotos, error: dbError } = await this.supabase
+                .from('post_images')
+                .select('storage_path');
+
+            if (dbError) throw dbError;
+
+            // Create sets for comparison
+            const storageFilePaths = new Set(storageFiles.map(file => `posts/${file.name}`));
+            const dbFilePaths = new Set(dbPhotos.map(photo => photo.storage_path));
+
+            // Find orphaned files
+            const orphanedFiles = storageFiles.filter(file => 
+                !dbFilePaths.has(`posts/${file.name}`)
+            );
+
+            // Calculate total storage used
+            const totalSize = storageFiles.reduce((sum, file) => sum + (file.metadata?.size || 0), 0);
+            const orphanSize = orphanedFiles.reduce((sum, file) => sum + (file.metadata?.size || 0), 0);
+
+            // Update UI
+            document.getElementById('totalPhotosCount').textContent = storageFiles.length;
+            document.getElementById('dbPhotosCount').textContent = dbPhotos.length;
+            document.getElementById('orphanPhotosCount').textContent = orphanedFiles.length;
+            document.getElementById('storageUsed').textContent = this.formatFileSize(totalSize);
+
+            // Enable/disable cleanup button
+            const cleanupBtn = document.getElementById('cleanupOrphansBtn');
+            cleanupBtn.disabled = orphanedFiles.length === 0;
+            
+            if (orphanedFiles.length > 0) {
+                cleanupBtn.textContent = `Delete ${orphanedFiles.length} Orphaned Photos (${this.formatFileSize(orphanSize)})`;
+            } else {
+                cleanupBtn.textContent = 'No Orphaned Photos';
+            }
+
+            // Store orphaned files for cleanup
+            this.orphanedFiles = orphanedFiles;
+
+            // Show orphaned files list if any
+            if (orphanedFiles.length > 0) {
+                this.displayOrphanedFiles(orphanedFiles);
+            } else {
+                document.getElementById('orphansList').classList.add('hidden');
+            }
+
+        } catch (error) {
+            console.error('Error refreshing storage stats:', error);
+            this.showNotification('Error loading storage statistics', 'error');
+            
+            // Reset UI on error
+            document.getElementById('totalPhotosCount').textContent = 'Error';
+            document.getElementById('dbPhotosCount').textContent = 'Error';
+            document.getElementById('orphanPhotosCount').textContent = 'Error';
+            document.getElementById('storageUsed').textContent = 'Error';
+        }
+    }
+
+    displayOrphanedFiles(orphanedFiles) {
+        const container = document.getElementById('orphansContainer');
+        const orphansList = document.getElementById('orphansList');
+        
+        container.innerHTML = orphanedFiles.slice(0, 10).map(file => `
+            <div class="orphan-item">
+                <span>posts/${file.name}</span>
+                <span>${this.formatFileSize(file.metadata?.size || 0)}</span>
+            </div>
+        `).join('');
+        
+        if (orphanedFiles.length > 10) {
+            container.innerHTML += `<div class="orphan-item"><em>... and ${orphanedFiles.length - 10} more files</em></div>`;
+        }
+        
+        orphansList.classList.remove('hidden');
+    }
+
+    async cleanupOrphanedPhotos() {
+        if (!this.orphanedFiles || this.orphanedFiles.length === 0) {
+            this.showNotification('No orphaned photos to delete', 'info');
+            return;
+        }
+
+        const orphanCount = this.orphanedFiles.length;
+        const totalSize = this.orphanedFiles.reduce((sum, file) => sum + (file.metadata?.size || 0), 0);
+        
+        if (!confirm(`Delete ${orphanCount} orphaned photos?\n\nThis will free up ${this.formatFileSize(totalSize)} of storage space.\n\nThis action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            // Show progress
+            const cleanupBtn = document.getElementById('cleanupOrphansBtn');
+            const originalText = cleanupBtn.textContent;
+            cleanupBtn.disabled = true;
+            cleanupBtn.textContent = 'Deleting...';
+
+            // Delete files in batches
+            const batchSize = 10;
+            let deletedCount = 0;
+            
+            for (let i = 0; i < this.orphanedFiles.length; i += batchSize) {
+                const batch = this.orphanedFiles.slice(i, i + batchSize);
+                const filePaths = batch.map(file => `posts/${file.name}`);
+                
+                const { error } = await this.supabase.storage
+                    .from('post-images')
+                    .remove(filePaths);
+
+                if (error) {
+                    console.error('Batch delete error:', error);
+                } else {
+                    deletedCount += batch.length;
+                }
+                
+                // Update progress
+                cleanupBtn.textContent = `Deleting... ${deletedCount}/${orphanCount}`;
+            }
+
+            this.showNotification(`Successfully deleted ${deletedCount} orphaned photos`, 'success');
+            
+            // Refresh stats
+            await this.refreshStorageStats();
+            
+        } catch (error) {
+            console.error('Error cleaning up orphaned photos:', error);
+            this.showNotification('Error deleting orphaned photos', 'error');
+        } finally {
+            // Reset button
+            const cleanupBtn = document.getElementById('cleanupOrphansBtn');
+            cleanupBtn.disabled = false;
+            cleanupBtn.textContent = 'Delete Orphaned Photos';
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 }
 
