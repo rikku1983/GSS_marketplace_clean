@@ -579,6 +579,9 @@ class GSS_Marketplace {
                     null
             };
 
+            console.log('Creating post with thumbnail index:', this.thumbnailIndex); // Debug
+            console.log('Selected photo path:', this.uploadedPhotos[this.thumbnailIndex]?.path); // Debug
+
             // Insert post
             const { data: post, error } = await this.supabase
                 .from('marketplace_posts')
@@ -597,7 +600,8 @@ class GSS_Marketplace {
                     file_size: photo.size || null,
                     mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    display_order: index + 1
+                    display_order: index + 1,
+                    is_thumbnail: index === this.thumbnailIndex // Add this field
                 }));
 
                 const { error: photoError } = await this.supabase
@@ -935,6 +939,9 @@ class GSS_Marketplace {
                     null
             };
 
+            console.log('Editing post with thumbnail index:', this.editThumbnailIndex); // Debug
+            console.log('Selected photo path:', this.editUploadedPhotos[this.editThumbnailIndex]?.path); // Debug
+
             // Update post
             const { error: updateError } = await this.supabase
                 .from('marketplace_posts')
@@ -943,7 +950,7 @@ class GSS_Marketplace {
 
             if (updateError) throw updateError;
 
-            // Handle photo updates if any new photos were added
+            // Handle photo updates if any photos exist
             if (this.editUploadedPhotos.length > 0) {
                 // Delete existing photos from database
                 const { error: deleteError } = await this.supabase
@@ -953,7 +960,7 @@ class GSS_Marketplace {
 
                 if (deleteError) console.error('Delete existing photos error:', deleteError);
 
-                // Insert new photos
+                // Insert new photos with correct thumbnail marking
                 const photoInserts = this.editUploadedPhotos.map((photo, index) => ({
                     post_id: parseInt(postId),
                     filename: photo.path.split('/').pop(),
@@ -961,7 +968,8 @@ class GSS_Marketplace {
                     file_size: photo.size || null,
                     mime_type: this.getMimeType(photo.name || photo.path),
                     storage_path: photo.path,
-                    display_order: index + 1
+                    display_order: index + 1,
+                    is_thumbnail: index === this.editThumbnailIndex // Add this field
                 }));
 
                 const { error: photoError } = await this.supabase
