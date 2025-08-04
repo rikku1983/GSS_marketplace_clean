@@ -1147,14 +1147,16 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    padding: 20px;
+    padding: 40px;
     box-sizing: border-box;
 }
 
 .photo-modal-content {
     position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: calc(100vw - 80px);
+    max-height: calc(100vh - 80px);
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1168,16 +1170,20 @@ body {
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* Ensure portrait photos don't exceed reasonable width */
+    max-width: min(100%, 80vw);
+    /* Ensure landscape photos don't exceed reasonable height */
+    max-height: min(100%, 85vh);
 }
 
 .photo-close {
     position: absolute;
-    top: -50px;
-    right: -10px;
+    top: -35px;
+    right: -5px;
     color: white;
-    font-size: 30px;
+    font-size: 28px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -1185,30 +1191,44 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    z-index: 10001;
 }
 
 .photo-close:hover {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(255, 255, 255, 0.2);
     transform: scale(1.1);
 }
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
     .photo-modal {
-        padding: 10px;
+        padding: 20px;
     }
     
     .photo-modal-content {
-        max-width: 95vw;
-        max-height: 95vh;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 40px);
+    }
+    
+    .photo-modal-content img {
+        max-width: min(100%, 90vw);
+        max-height: min(100%, 80vh);
     }
     
     .photo-close {
-        top: -40px;
+        top: -30px;
         right: 0;
         font-size: 24px;
         width: 35px;
         height: 35px;
+    }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .photo-modal-content img {
+        max-width: min(100%, 85vw);
+        max-height: min(100%, 80vh);
     }
 }
 
