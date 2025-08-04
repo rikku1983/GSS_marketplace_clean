@@ -839,16 +839,19 @@ class GSS_Marketplace {
                 console.error('Error getting photos for deletion:', photoError);
             }
 
-            // Delete the post (this will cascade delete photos due to foreign key)
-            const { error } = await this.supabase
-                .from('marketplace_posts')
-                .delete()
-                .eq('post_id', postId);
-
-            if (error) throw error;
-
-            // Delete photos from storage
+            // Delete photos from database first (before deleting the post)
             if (photos && photos.length > 0) {
+                const { error: deletePhotosError } = await this.supabase
+                    .from('post_images')
+                    .delete()
+                    .eq('post_id', postId);
+
+                if (deletePhotosError) {
+                    console.error('Error deleting photos from database:', deletePhotosError);
+                    throw deletePhotosError;
+                }
+
+                // Delete photos from storage
                 const filePaths = photos.map(photo => photo.storage_path);
                 const { error: storageError } = await this.supabase.storage
                     .from('post-images')
@@ -859,6 +862,14 @@ class GSS_Marketplace {
                     // Don't fail the whole operation if storage cleanup fails
                 }
             }
+
+            // Now delete the post (after photos are deleted)
+            const { error } = await this.supabase
+                .from('marketplace_posts')
+                .delete()
+                .eq('post_id', postId);
+
+            if (error) throw error;
 
             this.showNotification('Post deleted successfully', 'success');
             await this.loadPosts(); // Refresh the posts
