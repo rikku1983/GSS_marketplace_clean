@@ -29,6 +29,7 @@ class GSS_Marketplace {
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('createPostForm').addEventListener('submit', (e) => this.handleCreatePost(e));
+        document.getElementById('editPostForm').addEventListener('submit', (e) => this.handleEditPost(e));
         document.getElementById('addEmailForm').addEventListener('submit', (e) => this.handleAddEmail(e));
         
         // Admin tab switching
@@ -582,23 +583,39 @@ class GSS_Marketplace {
             return;
         }
 
-        grid.innerHTML = posts.map(post => `
-            <div class="post-card" data-post-id="${post.post_id}">
-                <div class="post-image">
-                    ${post.thumbnail_url ? 
-                        `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
-                        '<div class="no-image"><i class="fas fa-image"></i></div>'
-                    }
+        grid.innerHTML = posts.map(post => {
+            const isOwner = this.currentUser && post.user_id === this.currentUser.id;
+            const isAdmin = this.currentUser && this.currentUser.role === 'admin';
+            const canEdit = isOwner || isAdmin;
+
+            return `
+                <div class="post-card" data-post-id="${post.post_id}">
+                    ${canEdit ? `
+                        <div class="post-actions">
+                            <button class="btn-edit" onclick="app.editPost(${post.post_id})" title="Edit Post">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" onclick="app.deletePost(${post.post_id})" title="Delete Post">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+                    <div class="post-image">
+                        ${post.thumbnail_url ? 
+                            `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
+                            '<div class="no-image"><i class="fas fa-image"></i></div>'
+                        }
+                    </div>
+                    <div class="post-content">
+                        <h3 class="post-title">${post.title}</h3>
+                        <p class="post-price">$${post.price}</p>
+                        <span class="post-condition">${post.condition}</span>
+                        <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
+                        <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
+                    </div>
                 </div>
-                <div class="post-content">
-                    <h3 class="post-title">${post.title}</h3>
-                    <p class="post-price">$${post.price}</p>
-                    <span class="post-condition">${post.condition}</span>
-                    <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
-                    <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     async showPostDetails(postId) {
@@ -680,6 +697,91 @@ class GSS_Marketplace {
         this.showModal('adminModal');
         // Ensure whitelist tab is active and load data immediately
         this.switchTab('whitelist');
+    }
+
+    async deletePost(postId) {
+        if (!confirm('Are you sure you want to delete this post?\n\nThis action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const { error } = await this.supabase
+                .from('marketplace_posts')
+                .delete()
+                .eq('post_id', postId);
+
+            if (error) throw error;
+
+            this.showNotification('Post deleted successfully', 'success');
+            await this.loadPosts(); // Refresh the posts
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            this.showNotification('Error deleting post', 'error');
+        }
+    }
+
+    async editPost(postId) {
+        try {
+            // Load post data
+            const { data: post, error } = await this.supabase
+                .from('marketplace_posts')
+                .select('*')
+                .eq('post_id', postId)
+                .single();
+
+            if (error) throw error;
+
+            // Populate edit form with existing data
+            document.getElementById('editPostId').value = post.post_id;
+            document.getElementById('editPostTitle').value = post.title;
+            document.getElementById('editPostCategory').value = post.category;
+            document.getElementById('editPostBrand').value = post.brand || '';
+            document.getElementById('editPostSize').value = post.size || '';
+            document.getElementById('editPostCondition').value = post.condition;
+            document.getElementById('editPostPrice').value = post.price;
+            document.getElementById('editPostDescription').value = post.description || '';
+            document.getElementById('editPostContact').value = post.contact_method;
+            document.getElementById('editPostStatus').value = post.status;
+
+            this.showModal('editPostModal');
+        } catch (error) {
+            console.error('Error loading post for edit:', error);
+            this.showNotification('Error loading post data', 'error');
+        }
+    }
+
+    async handleEditPost(e) {
+        e.preventDefault();
+        
+        try {
+            const postId = document.getElementById('editPostId').value;
+            const updateData = {
+                title: document.getElementById('editPostTitle').value,
+                category: document.getElementById('editPostCategory').value,
+                brand: document.getElementById('editPostBrand').value || null,
+                size: document.getElementById('editPostSize').value || null,
+                condition: document.getElementById('editPostCondition').value,
+                price: parseFloat(document.getElementById('editPostPrice').value),
+                description: document.getElementById('editPostDescription').value || null,
+                contact_method: document.getElementById('editPostContact').value,
+                status: document.getElementById('editPostStatus').value,
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await this.supabase
+                .from('marketplace_posts')
+                .update(updateData)
+                .eq('post_id', postId);
+
+            if (error) throw error;
+
+            this.showNotification('Post updated successfully!', 'success');
+            this.hideModal('editPostModal');
+            await this.loadPosts();
+            
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+        }
     }
 }
 
