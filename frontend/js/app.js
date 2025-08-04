@@ -31,6 +31,12 @@ class GSS_Marketplace {
         document.getElementById('createPostForm')?.addEventListener('submit', (e) => this.handleCreatePost(e));
         document.getElementById('editPostForm')?.addEventListener('submit', (e) => this.handleEditPost(e));
         document.getElementById('addEmailForm')?.addEventListener('submit', (e) => this.handleAddEmail(e));
+        document.getElementById('profileForm')?.addEventListener('submit', (e) => this.handleProfileUpdate(e));
+        document.getElementById('changePasswordForm')?.addEventListener('submit', (e) => this.handlePasswordChange(e));
+        
+        // Profile modal buttons
+        document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.showChangePasswordModal());
+        document.getElementById('forgotPasswordLink')?.addEventListener('click', (e) => this.handleForgotPassword(e));
         
         // Admin tab switching
         document.addEventListener('click', (e) => {
@@ -437,7 +443,10 @@ class GSS_Marketplace {
 
     async handleProfileUpdate(e) {
         e.preventDefault();
+        console.log('Profile update triggered'); // Debug
+        
         const currentPassword = document.getElementById('currentPassword').value;
+        console.log('Current user:', this.currentUser); // Debug
         
         if (!currentPassword) {
             this.showNotification('Please enter your current password to save changes', 'error');
