@@ -562,11 +562,16 @@ class GSS_Marketplace {
                     *,
                     user_profiles(user_name)
                 `)
-                .eq('status', 'available')
                 .order('created_at', { ascending: false })
                 .limit(12);
 
             if (error) throw error;
+
+            console.log('All posts loaded:', posts); // Debug line
+            console.log('Posts by status:', posts.reduce((acc, post) => {
+                acc[post.status] = (acc[post.status] || 0) + 1;
+                return acc;
+            }, {})); // Debug line
 
             this.displayPosts(posts);
         } catch (error) {
