@@ -3,6 +3,15 @@ class GSS_Marketplace {
         this.supabase = null;
         this.currentUser = null;
         this.init();
+        
+        // Photo upload state
+        this.uploadedPhotos = [];
+        this.editUploadedPhotos = [];
+        this.thumbnailIndex = 0;
+        this.editThumbnailIndex = 0;
+        this.isUploading = false;
+        
+        this.initPhotoUpload();
     }
 
     async init() {
@@ -380,6 +389,13 @@ class GSS_Marketplace {
     hideModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
         document.body.style.overflow = 'auto';
+        
+        // Clear photos when closing modals
+        if (modalId === 'createPostModal') {
+            this.clearUploadedPhotos('create');
+        } else if (modalId === 'editPostModal') {
+            this.clearUploadedPhotos('edit');
+        }
     }
 
     showNotification(message, type = 'info') {
@@ -540,6 +556,12 @@ class GSS_Marketplace {
             return;
         }
 
+        // Prevent submission during upload
+        if (this.isUploading) {
+            this.showNotification('Please wait for photo upload to complete', 'error');
+            return;
+        }
+
         try {
             const postData = {
                 title: document.getElementById('postTitle').value,
@@ -550,24 +572,50 @@ class GSS_Marketplace {
                 price: parseFloat(document.getElementById('postPrice').value),
                 description: document.getElementById('postDescription').value || null,
                 contact_method: document.getElementById('postContact').value,
-                user_id: this.currentUser.id
+                user_id: this.currentUser.id,
+                photos_count: this.uploadedPhotos.length,
+                thumbnail_url: this.uploadedPhotos.length > 0 ? this.uploadedPhotos[this.thumbnailIndex]?.url : null
             };
 
-            const { data, error } = await this.supabase
+            // Insert post
+            const { data: post, error } = await this.supabase
                 .from('marketplace_posts')
                 .insert(postData)
-                .select();
+                .select()
+                .single();
 
             if (error) throw error;
+
+            // Insert photos if any
+            if (this.uploadedPhotos.length > 0) {
+                const photoInserts = this.uploadedPhotos.map((photo, index) => ({
+                    post_id: post.post_id,
+                    image_url: photo.url,
+                    storage_path: photo.path,
+                    is_thumbnail: index === this.thumbnailIndex,
+                    display_order: index + 1
+                }));
+
+                const { error: photoError } = await this.supabase
+                    .from('post_images')
+                    .insert(photoInserts);
+
+                if (photoError) {
+                    console.error('Photo insert error:', photoError);
+                    // Don't fail the whole operation, just log the error
+                }
+            }
 
             this.showNotification('Post created successfully!', 'success');
             this.hideModal('createPostModal');
             document.getElementById('createPostForm').reset();
+            this.clearUploadedPhotos('create');
             
             // Refresh posts to show the new one
             await this.loadPosts();
             
         } catch (error) {
+            console.error('Create post error:', error);
             this.showNotification(error.message, 'error');
         }
     }
@@ -578,14 +626,24 @@ class GSS_Marketplace {
                 .from('marketplace_posts')
                 .select(`
                     *,
-                    user_profiles(user_name)
+                    user_profiles(user_name),
+                    post_images(image_url, is_thumbnail)
                 `)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            this.allPosts = posts; // Store all posts
-            this.applyFilters(); // Apply current filters
+            // Process posts to get thumbnail URLs
+            const processedPosts = posts.map(post => {
+                const thumbnailImage = post.post_images?.find(img => img.is_thumbnail);
+                return {
+                    ...post,
+                    thumbnail_url: thumbnailImage?.image_url || post.thumbnail_url
+                };
+            });
+
+            this.allPosts = processedPosts;
+            this.applyFilters();
         } catch (error) {
             console.error('Error loading posts:', error);
             document.getElementById('postsLoading').textContent = 'Error loading posts';
@@ -647,52 +705,47 @@ class GSS_Marketplace {
                 .from('marketplace_posts')
                 .select(`
                     *,
-                    user_profiles(user_name, email, phone, location)
+                    user_profiles(user_name, email, phone, location),
+                    post_images(image_url, display_order)
                 `)
                 .eq('post_id', postId)
                 .single();
 
             if (error) throw error;
 
-            const content = document.getElementById('postDetailsContent');
-            content.innerHTML = `
+            // Sort photos by display order
+            const photos = post.post_images?.sort((a, b) => a.display_order - b.display_order) || [];
+
+            const photoGallery = photos.length > 0 ? `
+                <div class="post-photos">
+                    <div class="photo-gallery">
+                        ${photos.map((photo, index) => `
+                            <img src="${photo.image_url}" alt="Photo ${index + 1}" 
+                                 onclick="app.showPhotoModal('${photo.image_url}')"
+                                 style="cursor: pointer;">
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '<div class="no-photos">No photos available</div>';
+
+            document.getElementById('postDetailsContent').innerHTML = `
                 <div class="post-details">
-                    <div class="post-header">
-                        <h2>${post.title}</h2>
-                        <span class="post-price" style="font-size: 24px; font-weight: bold; color: #2c5aa0;">$${post.price}</span>
+                    <h2>${post.title}</h2>
+                    <div class="post-meta">
+                        <span class="post-price">$${post.price}</span>
+                        <span class="post-condition">${post.condition}</span>
+                        <span class="post-status ${post.status}">${post.status}</span>
                     </div>
                     
+                    ${photoGallery}
+                    
                     <div class="post-info">
-                        <div class="info-row">
-                            <strong>Category:</strong> ${post.category.replace('-', ' ')}
-                        </div>
-                        ${post.brand ? `<div class="info-row"><strong>Brand:</strong> ${post.brand}</div>` : ''}
-                        ${post.size ? `<div class="info-row"><strong>Size:</strong> ${post.size}</div>` : ''}
-                        <div class="info-row">
-                            <strong>Condition:</strong> ${post.condition}
-                        </div>
-                        <div class="info-row">
-                            <strong>Status:</strong> ${post.status}
-                        </div>
-                        <div class="info-row">
-                            <strong>Posted:</strong> ${new Date(post.created_at).toLocaleDateString()}
-                        </div>
-                    </div>
-
-                    ${post.description ? `
-                        <div class="post-description">
-                            <h3>Description</h3>
-                            <p>${post.description}</p>
-                        </div>
-                    ` : ''}
-
-                    <div class="seller-info">
-                        <h3>Seller Information</h3>
-                        <div class="seller-details">
-                            <p><strong>Name:</strong> ${post.user_profiles?.user_name || 'Unknown'}</p>
-                            <p><strong>Contact:</strong> ${post.contact_method}</p>
-                            ${post.user_profiles?.location ? `<p><strong>Location:</strong> ${post.user_profiles.location}</p>` : ''}
-                        </div>
+                        <p><strong>Category:</strong> ${post.category.replace('-', ' ')}</p>
+                        ${post.brand ? `<p><strong>Brand:</strong> ${post.brand}</p>` : ''}
+                        ${post.size ? `<p><strong>Size:</strong> ${post.size}</p>` : ''}
+                        ${post.description ? `<p><strong>Description:</strong> ${post.description}</p>` : ''}
+                        <p><strong>Contact:</strong> ${post.contact_method}</p>
+                        <p><strong>Posted:</strong> ${new Date(post.created_at).toLocaleDateString()}</p>
                     </div>
 
                     <div class="contact-actions" style="margin-top: 20px;">
@@ -754,7 +807,16 @@ class GSS_Marketplace {
 
             if (error) throw error;
 
-            // Populate edit form with existing data
+            // Load existing photos
+            const { data: photos, error: photoError } = await this.supabase
+                .from('post_images')
+                .select('*')
+                .eq('post_id', postId)
+                .order('display_order');
+
+            if (photoError) console.error('Load photos error:', photoError);
+
+            // Populate form
             document.getElementById('editPostId').value = post.post_id;
             document.getElementById('editPostTitle').value = post.title;
             document.getElementById('editPostCategory').value = post.category;
@@ -766,7 +828,29 @@ class GSS_Marketplace {
             document.getElementById('editPostContact').value = post.contact_method;
             document.getElementById('editPostStatus').value = post.status;
 
+            // Load existing photos into edit array
+            this.editUploadedPhotos = [];
+            this.editThumbnailIndex = 0;
+
+            if (photos && photos.length > 0) {
+                this.editUploadedPhotos = photos.map(photo => ({
+                    url: photo.image_url,
+                    path: photo.storage_path,
+                    name: 'existing',
+                    size: 0,
+                    existing: true // Mark as existing photo
+                }));
+
+                // Find thumbnail index
+                const thumbnailPhoto = photos.find(p => p.is_thumbnail);
+                if (thumbnailPhoto) {
+                    this.editThumbnailIndex = photos.indexOf(thumbnailPhoto);
+                }
+            }
+
+            this.updatePhotoPreview('edit');
             this.showModal('editPostModal');
+
         } catch (error) {
             console.error('Error loading post for edit:', error);
             this.showNotification('Error loading post data', 'error');
@@ -776,8 +860,20 @@ class GSS_Marketplace {
     async handleEditPost(e) {
         e.preventDefault();
         
+        if (!this.currentUser) {
+            this.showNotification('Please log in to edit posts', 'error');
+            return;
+        }
+
+        // Prevent submission during upload
+        if (this.isUploading) {
+            this.showNotification('Please wait for photo upload to complete', 'error');
+            return;
+        }
+
         try {
             const postId = document.getElementById('editPostId').value;
+            
             const updateData = {
                 title: document.getElementById('editPostTitle').value,
                 category: document.getElementById('editPostCategory').value,
@@ -788,21 +884,55 @@ class GSS_Marketplace {
                 description: document.getElementById('editPostDescription').value || null,
                 contact_method: document.getElementById('editPostContact').value,
                 status: document.getElementById('editPostStatus').value,
-                updated_at: new Date().toISOString()
+                photos_count: this.editUploadedPhotos.length,
+                thumbnail_url: this.editUploadedPhotos.length > 0 ? this.editUploadedPhotos[this.editThumbnailIndex]?.url : null
             };
 
-            const { error } = await this.supabase
+            // Update post
+            const { error: updateError } = await this.supabase
                 .from('marketplace_posts')
                 .update(updateData)
                 .eq('post_id', postId);
 
-            if (error) throw error;
+            if (updateError) throw updateError;
+
+            // Handle photo updates if any new photos were added
+            if (this.editUploadedPhotos.length > 0) {
+                // Delete existing photos from database (but keep storage files for now)
+                const { error: deleteError } = await this.supabase
+                    .from('post_images')
+                    .delete()
+                    .eq('post_id', postId);
+
+                if (deleteError) console.error('Delete existing photos error:', deleteError);
+
+                // Insert new photos
+                const photoInserts = this.editUploadedPhotos.map((photo, index) => ({
+                    post_id: parseInt(postId),
+                    image_url: photo.url,
+                    storage_path: photo.path,
+                    is_thumbnail: index === this.editThumbnailIndex,
+                    display_order: index + 1
+                }));
+
+                const { error: photoError } = await this.supabase
+                    .from('post_images')
+                    .insert(photoInserts);
+
+                if (photoError) {
+                    console.error('Photo insert error:', photoError);
+                }
+            }
 
             this.showNotification('Post updated successfully!', 'success');
             this.hideModal('editPostModal');
+            this.clearUploadedPhotos('edit');
+            
+            // Refresh posts
             await this.loadPosts();
             
         } catch (error) {
+            console.error('Edit post error:', error);
             this.showNotification(error.message, 'error');
         }
     }
@@ -855,6 +985,334 @@ class GSS_Marketplace {
             countElement.textContent = `Showing ${filtered} of ${total} posts`;
             document.querySelector('.filters-container').appendChild(countElement);
         }
+    }
+
+    initPhotoUpload() {
+        // Create Post Photo Upload
+        const addMoreBtn = document.getElementById('addMorePhotosBtn');
+        if (addMoreBtn) {
+            addMoreBtn.addEventListener('click', () => this.openGalleryUpload());
+        }
+
+        // Edit Post Photo Upload
+        const editAddMoreBtn = document.getElementById('editAddMorePhotosBtn');
+        if (editAddMoreBtn) {
+            editAddMoreBtn.addEventListener('click', () => this.openEditGalleryUpload());
+        }
+
+        // File input change handlers
+        const cameraInput = document.getElementById('photoInputCamera');
+        const galleryInput = document.getElementById('photoInputGallery');
+        const editCameraInput = document.getElementById('editPhotoInputCamera');
+        const editGalleryInput = document.getElementById('editPhotoInputGallery');
+
+        if (cameraInput) cameraInput.addEventListener('change', (e) => this.handleFileSelect(e, 'create'));
+        if (galleryInput) galleryInput.addEventListener('change', (e) => this.handleFileSelect(e, 'create'));
+        if (editCameraInput) editCameraInput.addEventListener('change', (e) => this.handleFileSelect(e, 'edit'));
+        if (editGalleryInput) editGalleryInput.addEventListener('change', (e) => this.handleFileSelect(e, 'edit'));
+    }
+
+    // Open camera upload for create post
+    openCameraUpload() {
+        if (this.uploadedPhotos.length >= 5) {
+            this.showNotification('Maximum 5 photos allowed', 'error');
+            return;
+        }
+        document.getElementById('photoInputCamera').click();
+    }
+
+    // Open gallery upload for create post
+    openGalleryUpload() {
+        if (this.uploadedPhotos.length >= 5) {
+            this.showNotification('Maximum 5 photos allowed', 'error');
+            return;
+        }
+        document.getElementById('photoInputGallery').click();
+    }
+
+    // Open camera upload for edit post
+    openEditCameraUpload() {
+        if (this.editUploadedPhotos.length >= 5) {
+            this.showNotification('Maximum 5 photos allowed', 'error');
+            return;
+        }
+        document.getElementById('editPhotoInputCamera').click();
+    }
+
+    // Open gallery upload for edit post
+    openEditGalleryUpload() {
+        if (this.editUploadedPhotos.length >= 5) {
+            this.showNotification('Maximum 5 photos allowed', 'error');
+            return;
+        }
+        document.getElementById('editPhotoInputGallery').click();
+    }
+
+    // Handle file selection
+    async handleFileSelect(event, mode) {
+        const files = Array.from(event.target.files);
+        const currentPhotos = mode === 'create' ? this.uploadedPhotos : this.editUploadedPhotos;
+        
+        // Check total photo limit
+        if (currentPhotos.length + files.length > 5) {
+            this.showNotification(`Can only upload ${5 - currentPhotos.length} more photos`, 'error');
+            return;
+        }
+
+        // Validate and process files
+        const validFiles = [];
+        for (const file of files) {
+            if (this.validateFile(file)) {
+                validFiles.push(file);
+            }
+        }
+
+        if (validFiles.length > 0) {
+            await this.uploadFiles(validFiles, mode);
+        }
+
+        // Clear input
+        event.target.value = '';
+    }
+
+    // Validate file
+    validateFile(file) {
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            this.showNotification('Only JPG, PNG, and WebP files are allowed', 'error');
+            return false;
+        }
+
+        // Check file size (5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            this.showNotification('File size must be less than 5MB', 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    // Upload files to Supabase
+    async uploadFiles(files, mode) {
+        if (this.isUploading) return;
+        
+        this.isUploading = true;
+        this.setFormDisabled(mode, true);
+        this.showUploadProgress(mode, true);
+
+        try {
+            const uploadPromises = files.map((file, index) => 
+                this.uploadSingleFile(file, mode, index, files.length)
+            );
+
+            const results = await Promise.all(uploadPromises);
+            
+            // Add successful uploads to photo arrays
+            const currentPhotos = mode === 'create' ? this.uploadedPhotos : this.editUploadedPhotos;
+            results.forEach(result => {
+                if (result.success) {
+                    currentPhotos.push(result.photo);
+                }
+            });
+
+            // Set first photo as thumbnail if none selected
+            if (mode === 'create' && this.uploadedPhotos.length === results.filter(r => r.success).length) {
+                this.thumbnailIndex = 0;
+            } else if (mode === 'edit' && this.editUploadedPhotos.length === results.filter(r => r.success).length) {
+                this.editThumbnailIndex = 0;
+            }
+
+            this.updatePhotoPreview(mode);
+            this.showNotification(`${results.filter(r => r.success).length} photos uploaded successfully`, 'success');
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showNotification('Upload failed. Please try again.', 'error');
+        } finally {
+            this.isUploading = false;
+            this.setFormDisabled(mode, false);
+            this.showUploadProgress(mode, false);
+        }
+    }
+
+    // Upload single file
+    async uploadSingleFile(file, mode, index, totalFiles) {
+        try {
+            // Generate unique filename
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `posts/${fileName}`;
+
+            // Update progress
+            const progressPercent = Math.round(((index + 1) / totalFiles) * 100);
+            this.updateUploadProgress(mode, progressPercent, `Uploading ${index + 1}/${totalFiles}...`);
+
+            // Upload to Supabase Storage
+            const { data, error } = await this.supabase.storage
+                .from('post-images')
+                .upload(filePath, file);
+
+            if (error) throw error;
+
+            // Get public URL
+            const { data: { publicUrl } } = this.supabase.storage
+                .from('post-images')
+                .getPublicUrl(filePath);
+
+            return {
+                success: true,
+                photo: {
+                    url: publicUrl,
+                    path: filePath,
+                    name: file.name,
+                    size: file.size
+                }
+            };
+
+        } catch (error) {
+            console.error('Single file upload error:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    // Update photo preview
+    updatePhotoPreview(mode) {
+        const photos = mode === 'create' ? this.uploadedPhotos : this.editUploadedPhotos;
+        const thumbnailIndex = mode === 'create' ? this.thumbnailIndex : this.editThumbnailIndex;
+        const containerId = mode === 'create' ? 'photoPreviewContainer' : 'editPhotoPreviewContainer';
+        const gridId = mode === 'create' ? 'photoPreviewGrid' : 'editPhotoPreviewGrid';
+        const uploadAreaId = mode === 'create' ? 'photoUploadArea' : 'editPhotoUploadArea';
+
+        const container = document.getElementById(containerId);
+        const grid = document.getElementById(gridId);
+        const uploadArea = document.getElementById(uploadAreaId);
+
+        if (photos.length === 0) {
+            container.style.display = 'none';
+            uploadArea.style.display = 'block';
+            return;
+        }
+
+        // Show preview container, hide upload area
+        container.style.display = 'block';
+        uploadArea.style.display = 'none';
+
+        // Generate preview HTML
+        grid.innerHTML = photos.map((photo, index) => `
+            <div class="photo-preview-item ${index === thumbnailIndex ? 'thumbnail' : ''}" 
+                 onclick="app.setThumbnail(${index}, '${mode}')">
+                <img src="${photo.url}" alt="Preview ${index + 1}">
+                <button class="photo-remove-btn" onclick="app.removePhoto(${index}, '${mode}')" type="button">
+                    ×
+                </button>
+            </div>
+        `).join('');
+    }
+
+    // Set thumbnail
+    setThumbnail(index, mode) {
+        if (mode === 'create') {
+            this.thumbnailIndex = index;
+        } else {
+            this.editThumbnailIndex = index;
+        }
+        this.updatePhotoPreview(mode);
+    }
+
+    // Remove photo
+    async removePhoto(index, mode) {
+        const photos = mode === 'create' ? this.uploadedPhotos : this.editUploadedPhotos;
+        const photo = photos[index];
+
+        try {
+            // Delete from Supabase Storage
+            const { error } = await this.supabase.storage
+                .from('post-images')
+                .remove([photo.path]);
+
+            if (error) throw error;
+
+            // Remove from array
+            photos.splice(index, 1);
+
+            // Adjust thumbnail index
+            if (mode === 'create') {
+                if (this.thumbnailIndex >= index && this.thumbnailIndex > 0) {
+                    this.thumbnailIndex--;
+                }
+            } else {
+                if (this.editThumbnailIndex >= index && this.editThumbnailIndex > 0) {
+                    this.editThumbnailIndex--;
+                }
+            }
+
+            this.updatePhotoPreview(mode);
+            this.showNotification('Photo removed', 'success');
+
+        } catch (error) {
+            console.error('Remove photo error:', error);
+            this.showNotification('Failed to remove photo', 'error');
+        }
+    }
+
+    // Show/hide upload progress
+    showUploadProgress(mode, show) {
+        const progressId = mode === 'create' ? 'uploadProgress' : 'editUploadProgress';
+        const progress = document.getElementById(progressId);
+        if (progress) {
+            progress.classList.toggle('hidden', !show);
+        }
+    }
+
+    // Update upload progress
+    updateUploadProgress(mode, percent, text) {
+        const fillId = mode === 'create' ? 'progressFill' : 'editProgressFill';
+        const textId = mode === 'create' ? 'progressText' : 'editProgressText';
+        
+        const fill = document.getElementById(fillId);
+        const textEl = document.getElementById(textId);
+        
+        if (fill) fill.style.width = `${percent}%`;
+        if (textEl) textEl.textContent = text;
+    }
+
+    // Set form disabled state
+    setFormDisabled(mode, disabled) {
+        const formId = mode === 'create' ? 'createPostForm' : 'editPostForm';
+        const form = document.getElementById(formId);
+        if (form) {
+            form.classList.toggle('form-disabled', disabled);
+        }
+    }
+
+    // Clear uploaded photos (call when modal closes)
+    clearUploadedPhotos(mode) {
+        if (mode === 'create') {
+            this.uploadedPhotos = [];
+            this.thumbnailIndex = 0;
+        } else {
+            this.editUploadedPhotos = [];
+            this.editThumbnailIndex = 0;
+        }
+        this.updatePhotoPreview(mode);
+    }
+
+    // Add photo modal for full-size viewing
+    showPhotoModal(imageUrl) {
+        const modal = document.createElement('div');
+        modal.className = 'photo-modal';
+        modal.innerHTML = `
+            <div class="photo-modal-content">
+                <span class="photo-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <img src="${imageUrl}" alt="Full size photo">
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
 }
 
