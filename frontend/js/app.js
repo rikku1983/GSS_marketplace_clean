@@ -201,6 +201,9 @@ class GSS_Marketplace {
         userMenu.classList.remove('hidden');
         document.getElementById('userName').textContent = profile.user_name;
         
+        // Store user profile for role checking
+        this.currentUser.role = profile.role;
+        
         // Show admin button if user is admin
         if (profile.role === 'admin') {
             document.getElementById('adminBtn').style.display = 'block';
@@ -592,10 +595,10 @@ class GSS_Marketplace {
                 <div class="post-card" data-post-id="${post.post_id}">
                     ${canEdit ? `
                         <div class="post-actions">
-                            <button class="btn-edit" onclick="app.editPost(${post.post_id})" title="Edit Post">
+                            <button class="btn-edit" onclick="event.stopPropagation(); app.editPost(${post.post_id})" title="Edit Post">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-delete" onclick="app.deletePost(${post.post_id})" title="Delete Post">
+                            <button class="btn-delete" onclick="event.stopPropagation(); app.deletePost(${post.post_id})" title="Delete Post">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -609,7 +612,10 @@ class GSS_Marketplace {
                     <div class="post-content">
                         <h3 class="post-title">${post.title}</h3>
                         <p class="post-price">$${post.price}</p>
-                        <span class="post-condition">${post.condition}</span>
+                        <div class="post-badges">
+                            <span class="post-condition">${post.condition}</span>
+                            ${post.status !== 'available' ? `<span class="post-status ${post.status}">${post.status}</span>` : ''}
+                        </div>
                         <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
                         <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
                     </div>
