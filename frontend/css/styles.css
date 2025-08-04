@@ -671,9 +671,10 @@ body {
 
 .no-posts {
     text-align: center;
-    padding: 40px;
-    color: var(--text-secondary);
-    font-style: italic;
+    color: #666;
+    font-size: 18px;
+    padding: 40px 20px;
+    grid-column: 1 / -1; /* Span full width of grid */
 }
 
 /* Responsive */

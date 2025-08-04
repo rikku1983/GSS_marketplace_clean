@@ -966,8 +966,8 @@ class GSS_Marketplace {
                     null
             };
 
-            console.log('Editing post with thumbnail index:', this.editThumbnailIndex);
-            console.log('Selected photo path:', this.editUploadedPhotos[this.editThumbnailIndex]?.path);
+            // console.log('Editing post with thumbnail index:', this.editThumbnailIndex);
+            // console.log('Selected photo path:', this.editUploadedPhotos[this.editThumbnailIndex]?.path);
 
             // Update post
             const { error: updateError } = await this.supabase
