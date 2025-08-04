@@ -1147,39 +1147,69 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .photo-modal-content {
     position: relative;
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .photo-modal-content img {
     max-width: 100%;
     max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
     border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .photo-close {
     position: absolute;
-    top: -40px;
-    right: 0;
+    top: -50px;
+    right: -10px;
     color: white;
     font-size: 30px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);
     width: 40px;
     height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.3s ease;
 }
 
 .photo-close:hover {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .photo-modal {
+        padding: 10px;
+    }
+    
+    .photo-modal-content {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .photo-close {
+        top: -40px;
+        right: 0;
+        font-size: 24px;
+        width: 35px;
+        height: 35px;
+    }
 }
 
 /* Post Details Styling */
