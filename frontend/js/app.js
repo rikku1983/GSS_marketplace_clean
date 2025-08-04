@@ -633,12 +633,16 @@ class GSS_Marketplace {
 
             if (error) throw error;
 
-            // Process posts to get thumbnail URLs
+            // Process posts to get thumbnail URLs - handle missing photos gracefully
             const processedPosts = posts.map(post => {
-                const thumbnailImage = post.post_images?.find(img => img.is_thumbnail);
+                // Handle case where post_images might be null or empty array
+                const postImages = post.post_images || [];
+                const thumbnailImage = postImages.find(img => img.is_thumbnail);
+                
                 return {
                     ...post,
-                    thumbnail_url: thumbnailImage?.image_url || post.thumbnail_url
+                    thumbnail_url: thumbnailImage?.image_url || post.thumbnail_url || null,
+                    post_images: postImages // Ensure it's always an array
                 };
             });
 
@@ -713,8 +717,8 @@ class GSS_Marketplace {
 
             if (error) throw error;
 
-            // Sort photos by display order
-            const photos = post.post_images?.sort((a, b) => a.display_order - b.display_order) || [];
+            // Handle missing photos gracefully
+            const photos = (post.post_images || []).sort((a, b) => a.display_order - b.display_order);
 
             const photoGallery = photos.length > 0 ? `
                 <div class="post-photos">
