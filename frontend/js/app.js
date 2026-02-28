@@ -171,6 +171,7 @@ class GSS_Marketplace {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: window.location.origin,
                     data: {
                         user_name: name,
                         phone,
