@@ -182,6 +182,13 @@ class GSS_Marketplace {
 
             if (error) throw error;
 
+            // Supabase returns a fake success for already-registered emails when
+            // email confirmation is enabled (anti-enumeration security feature).
+            // An empty identities array indicates the email is already in use.
+            if (data.user?.identities?.length === 0) {
+                throw new Error('An account with this email already exists. Please log in instead.');
+            }
+
             this.hideModal('registerModal');
             this.showNotification('Registration successful! Please check your email for confirmation.', 'success');
         } catch (error) {
