@@ -34,6 +34,9 @@ using (
 );
 
 -- Policy: Allow only admins to delete (DELETE)
+-- Regular users cannot delete storage files directly.
+-- When a post is deleted, its storage files become orphaned and
+-- must be cleaned up by an admin using the "Cleanup Orphaned Photos" feature.
 create policy "Admins can delete post-images"
 on storage.objects
 for delete
