@@ -739,7 +739,7 @@ class GSS_Marketplace {
                     ` : ''}
                     <div class="post-image">
                         ${post.thumbnail_url ? 
-                            `<img src="${post.thumbnail_url}" alt="${post.title}">` : 
+                            `<img src="${post.thumbnail_url}" alt="${post.title}" loading="lazy" decoding="async">` : 
                             '<div class="no-image"><i class="fas fa-image"></i></div>'
                         }
                     </div>
@@ -786,7 +786,7 @@ class GSS_Marketplace {
                 <div class="post-photos">
                     <div class="photo-gallery">
                         ${photos.map((photo, index) => `
-                            <img src="${photo.image_url}" alt="Photo ${index + 1}" 
+                            <img src="${photo.image_url}" alt="Photo ${index + 1}" loading="lazy" decoding="async"
                                  onclick="app.showPhotoModal('${photo.image_url}')"
                                  style="cursor: pointer;">
                         `).join('')}
