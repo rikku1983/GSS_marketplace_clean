@@ -800,6 +800,9 @@ class GSS_Marketplace {
                     ...img,
                     image_url: img.storage_path ? 
                         this.supabase.storage.from('post-images').getPublicUrl(img.storage_path).data.publicUrl : 
+                        null,
+                    thumbnail_url: img.storage_path ?
+                        this.supabase.storage.from('post-images').getPublicUrl(this.getThumbnailPath(img.storage_path)).data.publicUrl :
                         null
                 }));
 
@@ -807,7 +810,8 @@ class GSS_Marketplace {
                 <div class="post-photos">
                     <div class="photo-gallery">
                         ${photos.map((photo, index) => `
-                            <img src="${photo.image_url}" alt="Photo ${index + 1}" loading="lazy" decoding="async"
+                            <img src="${photo.thumbnail_url || photo.image_url}" alt="Photo ${index + 1}" loading="lazy" decoding="async"
+                                 onerror="this.onerror=null; this.src='${photo.image_url}'"
                                  onclick="app.showPhotoModal('${photo.image_url}')"
                                  style="cursor: pointer;">
                         `).join('')}
