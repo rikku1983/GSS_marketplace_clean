@@ -2,6 +2,7 @@ class GSS_Marketplace {
     constructor() {
         this.supabase = null;
         this.currentUser = null;
+        this.currentProfile = null;
         this.init();
         
         // Photo upload state
@@ -208,6 +209,7 @@ class GSS_Marketplace {
             .single();
 
         if (profile) {
+            this.currentProfile = profile;
             this.updateUIForLoggedInUser(profile);
         } else {
             // Create profile if it doesn't exist
@@ -241,6 +243,8 @@ class GSS_Marketplace {
     }
 
     updateUIForLoggedInUser(profile) {
+        this.currentProfile = profile;
+
         // Hide login/register buttons
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('registerBtn').style.display = 'none';
@@ -262,6 +266,7 @@ class GSS_Marketplace {
     async logout() {
         await this.supabase.auth.signOut();
         this.currentUser = null;
+        this.currentProfile = null;
         
         // Reset UI
         document.getElementById('loginBtn').style.display = 'block';
@@ -529,7 +534,13 @@ class GSS_Marketplace {
             this.hideModal('profileModal');
             
             // Update UI with new name
-            document.getElementById('userName').textContent = document.getElementById('profileName').value;
+            const updatedName = document.getElementById('profileName').value;
+            document.getElementById('userName').textContent = updatedName;
+            if (this.currentProfile) {
+                this.currentProfile.user_name = updatedName;
+                this.currentProfile.phone = document.getElementById('profilePhone').value;
+                this.currentProfile.location = document.getElementById('profileLocation').value;
+            }
             
             // Clear password field
             document.getElementById('currentPassword').value = '';
@@ -599,6 +610,7 @@ class GSS_Marketplace {
                 description: document.getElementById('postDescription').value || null,
                 contact_method: document.getElementById('postContact').value,
                 user_id: this.currentUser.id,
+                seller_name: this.currentProfile?.user_name || this.currentUser.email?.split('@')[0] || 'GSS Member',
                 photos_count: this.uploadedPhotos.length,
                 thumbnail_url: this.uploadedPhotos.length > 0 ? 
                     this.getPhotoThumbnailUrl(this.uploadedPhotos[this.thumbnailIndex]) : 
@@ -694,7 +706,6 @@ class GSS_Marketplace {
                 .from('marketplace_posts')
                 .select(`
                     *,
-                    user_profiles(user_name),
                     post_images(storage_path, display_order)
                 `)
                 .order('created_at', { ascending: false });
@@ -746,6 +757,7 @@ class GSS_Marketplace {
             const isOwner = this.currentUser && post.user_id === this.currentUser.id;
             const isAdmin = this.currentUser && this.currentUser.role === 'admin';
             const canEdit = isOwner || isAdmin;
+            const sellerName = post.seller_name;
 
             return `
                 <div class="post-card" data-post-id="${post.post_id}">
@@ -772,7 +784,7 @@ class GSS_Marketplace {
                             <span class="post-condition">${post.condition}</span>
                             ${post.status !== 'available' ? `<span class="post-status ${post.status}">${post.status}</span>` : ''}
                         </div>
-                        <p class="post-seller">by ${post.user_profiles?.user_name || 'Unknown'}</p>
+                        ${sellerName ? `<p class="post-seller">by ${sellerName}</p>` : ''}
                         <p class="post-date">${new Date(post.created_at).toLocaleDateString()}</p>
                     </div>
                 </div>
@@ -786,13 +798,13 @@ class GSS_Marketplace {
                 .from('marketplace_posts')
                 .select(`
                     *,
-                    user_profiles(user_name, email, phone, location),
                     post_images(storage_path, display_order)
                 `)
                 .eq('post_id', postId)
                 .single();
 
             if (error) throw error;
+            const sellerName = post.seller_name;
 
             // Generate URLs from storage paths and sort by display order
             const photos = (post.post_images || [])
@@ -836,6 +848,7 @@ class GSS_Marketplace {
                         ${post.brand ? `<p><strong>Brand:</strong> ${post.brand}</p>` : ''}
                         ${post.size ? `<p><strong>Size:</strong> ${post.size}</p>` : ''}
                         ${post.description ? `<p><strong>Description:</strong> ${post.description}</p>` : ''}
+                        ${sellerName ? `<p><strong>Posted by:</strong> ${sellerName}</p>` : ''}
                         <p><strong>Contact:</strong> ${post.contact_method}</p>
                         <p><strong>Posted:</strong> ${new Date(post.created_at).toLocaleDateString()}</p>
                     </div>

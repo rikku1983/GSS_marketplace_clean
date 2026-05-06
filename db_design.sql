@@ -41,6 +41,7 @@ CREATE TABLE public.marketplace_posts (
   price numeric NOT NULL CHECK (price >= 0),
   contact_method character varying NOT NULL,
   user_id uuid NOT NULL,
+  seller_name text,
   status character varying DEFAULT 'available'::character varying CHECK (status::text = ANY (ARRAY['available'::character varying, 'pending'::character varying, 'sold'::character varying]::text[])),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
