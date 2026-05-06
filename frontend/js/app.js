@@ -600,7 +600,7 @@ class GSS_Marketplace {
                 user_id: this.currentUser.id,
                 photos_count: this.uploadedPhotos.length,
                 thumbnail_url: this.uploadedPhotos.length > 0 ? 
-                    this.supabase.storage.from('post-images').getPublicUrl(this.uploadedPhotos[this.thumbnailIndex]?.path).data.publicUrl : 
+                    this.getPhotoThumbnailUrl(this.uploadedPhotos[this.thumbnailIndex]) : 
                     null
             };
 
@@ -664,6 +664,27 @@ class GSS_Marketplace {
             default:
                 return 'image/jpeg';
         }
+    }
+
+    getPhotoThumbnailUrl(photo) {
+        if (!photo) return null;
+        if (photo.thumbnailUrl) return photo.thumbnailUrl;
+        return this.supabase.storage.from('post-images').getPublicUrl(photo.path).data.publicUrl;
+    }
+
+    getThumbnailPath(originalPath) {
+        if (!originalPath) return null;
+        const filename = originalPath.split('/').pop();
+        const baseName = filename.replace(/\.[^.]+$/, '');
+        return `thumbnails/${baseName}.jpg`;
+    }
+
+    getStoragePathFromPublicUrl(url) {
+        if (!url) return null;
+        const marker = '/post-images/';
+        const markerIndex = url.indexOf(marker);
+        if (markerIndex === -1) return null;
+        return decodeURIComponent(url.slice(markerIndex + marker.length).split('?')[0]);
     }
 
     async loadPosts() {
@@ -837,6 +858,16 @@ class GSS_Marketplace {
         }
 
         try {
+            const { data: postForDelete, error: postError } = await this.supabase
+                .from('marketplace_posts')
+                .select('thumbnail_url')
+                .eq('post_id', postId)
+                .single();
+
+            if (postError) {
+                console.error('Error getting post thumbnail for deletion:', postError);
+            }
+
             // First, get all photos for this post
             const { data: photos, error: photoError } = await this.supabase
                 .from('post_images')
@@ -860,7 +891,11 @@ class GSS_Marketplace {
                 }
 
                 // Delete photos from storage
-                const filePaths = photos.map(photo => photo.storage_path);
+                const thumbnailPath = this.getStoragePathFromPublicUrl(postForDelete?.thumbnail_url);
+                const filePaths = [...new Set([
+                    ...photos.map(photo => photo.storage_path),
+                    ...(thumbnailPath ? [thumbnailPath] : [])
+                ])];
                 const { error: storageError } = await this.supabase.storage
                     .from('post-images')
                     .remove(filePaths);
@@ -909,10 +944,13 @@ class GSS_Marketplace {
                 console.error('Error loading photos:', photoError);
             }
 
+            const currentThumbnailPath = this.getStoragePathFromPublicUrl(post.thumbnail_url);
+
             // Convert existing photos to the format expected by the upload system
             this.editUploadedPhotos = (photos || []).map(photo => ({
                 url: this.supabase.storage.from('post-images').getPublicUrl(photo.storage_path).data.publicUrl,
                 path: photo.storage_path,
+                thumbnailUrl: currentThumbnailPath === this.getThumbnailPath(photo.storage_path) ? post.thumbnail_url : null,
                 name: photo.storage_path.split('/').pop(),
                 id: photo.image_id,  // Store the database ID
                 originalData: photo  // Store original data for comparison
@@ -920,9 +958,9 @@ class GSS_Marketplace {
             
             // Find thumbnail index based on thumbnail_url
             if (post.thumbnail_url && this.editUploadedPhotos.length > 0) {
-                const thumbnailPath = post.thumbnail_url.split('post-images/')[1];
+                const thumbnailPath = this.getStoragePathFromPublicUrl(post.thumbnail_url);
                 const thumbnailIndex = this.editUploadedPhotos.findIndex(photo => 
-                    photo.path.includes(thumbnailPath)
+                    photo.path === thumbnailPath || photo.thumbnailUrl === post.thumbnail_url
                 );
                 this.editThumbnailIndex = thumbnailIndex >= 0 ? thumbnailIndex : 0;
             } else {
@@ -970,7 +1008,7 @@ class GSS_Marketplace {
                 status: document.getElementById('editPostStatus').value,
                 photos_count: this.editUploadedPhotos.length,
                 thumbnail_url: this.editUploadedPhotos.length > 0 ? 
-                    this.supabase.storage.from('post-images').getPublicUrl(this.editUploadedPhotos[this.editThumbnailIndex]?.path).data.publicUrl : 
+                    this.getPhotoThumbnailUrl(this.editUploadedPhotos[this.editThumbnailIndex]) : 
                     null
             };
 
@@ -1232,6 +1270,42 @@ class GSS_Marketplace {
         }
     }
 
+    async createThumbnailBlob(file) {
+        const imageUrl = URL.createObjectURL(file);
+        const image = new Image();
+
+        try {
+            await new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = reject;
+                image.src = imageUrl;
+            });
+
+            const maxDimension = 600;
+            const scale = Math.min(1, maxDimension / image.width, maxDimension / image.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            return await new Promise((resolve, reject) => {
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Could not create thumbnail'));
+                    }
+                }, 'image/jpeg', 0.78);
+            });
+        } finally {
+            URL.revokeObjectURL(imageUrl);
+        }
+    }
+
     // Upload single file
     async uploadSingleFile(file, mode, index, totalFiles) {
         try {
@@ -1239,6 +1313,7 @@ class GSS_Marketplace {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `posts/${fileName}`;
+            const thumbnailPath = this.getThumbnailPath(filePath);
 
             // Update progress
             const progressPercent = Math.round(((index + 1) / totalFiles) * 100);
@@ -1256,11 +1331,35 @@ class GSS_Marketplace {
                 .from('post-images')
                 .getPublicUrl(filePath);
 
+            let thumbnailUrl = null;
+            let thumbnailSize = null;
+
+            try {
+                const thumbnailBlob = await this.createThumbnailBlob(file);
+                const { error: thumbnailError } = await this.supabase.storage
+                    .from('post-images')
+                    .upload(thumbnailPath, thumbnailBlob, {
+                        contentType: 'image/jpeg'
+                    });
+
+                if (thumbnailError) throw thumbnailError;
+
+                thumbnailUrl = this.supabase.storage
+                    .from('post-images')
+                    .getPublicUrl(thumbnailPath).data.publicUrl;
+                thumbnailSize = thumbnailBlob.size;
+            } catch (thumbnailError) {
+                console.warn('Thumbnail upload failed, using original image as cover:', thumbnailError);
+            }
+
             return {
                 success: true,
                 photo: {
                     url: publicUrl,
                     path: filePath,
+                    thumbnailUrl,
+                    thumbnailPath: thumbnailUrl ? thumbnailPath : null,
+                    thumbnailSize,
                     name: file.name,
                     size: file.size
                 }
@@ -1328,7 +1427,7 @@ class GSS_Marketplace {
             // Delete from Supabase Storage
             const { error } = await this.supabase.storage
                 .from('post-images')
-                .remove([photo.path]);
+                .remove([photo.path, photo.thumbnailPath].filter(Boolean));
 
             if (error) throw error;
 
@@ -1410,6 +1509,22 @@ class GSS_Marketplace {
         document.body.appendChild(modal);
     }
 
+    async listStorageFolder(folder) {
+        const { data, error } = await this.supabase.storage
+            .from('post-images')
+            .list(folder, {
+                limit: 1000,
+                sortBy: { column: 'name', order: 'asc' }
+            });
+
+        if (error) throw error;
+
+        return (data || []).map(file => ({
+            ...file,
+            storage_path: `${folder}/${file.name}`
+        }));
+    }
+
     async refreshStorageStats() {
         try {
             // Show loading state
@@ -1419,14 +1534,10 @@ class GSS_Marketplace {
             document.getElementById('storageUsed').textContent = 'Loading...';
             
             // Get all files from storage
-            const { data: storageFiles, error: storageError } = await this.supabase.storage
-                .from('post-images')
-                .list('posts', {
-                    limit: 1000,
-                    sortBy: { column: 'name', order: 'asc' }
-                });
-
-            if (storageError) throw storageError;
+            const storageFiles = [
+                ...await this.listStorageFolder('posts'),
+                ...await this.listStorageFolder('thumbnails')
+            ];
 
             // Get all photos from database
             const { data: dbPhotos, error: dbError } = await this.supabase
@@ -1435,13 +1546,22 @@ class GSS_Marketplace {
 
             if (dbError) throw dbError;
 
+            const { data: posts, error: postsError } = await this.supabase
+                .from('marketplace_posts')
+                .select('thumbnail_url');
+
+            if (postsError) throw postsError;
+
             // Create sets for comparison
-            const storageFilePaths = new Set(storageFiles.map(file => `posts/${file.name}`));
             const dbFilePaths = new Set(dbPhotos.map(photo => photo.storage_path));
+            (posts || []).forEach(post => {
+                const thumbnailPath = this.getStoragePathFromPublicUrl(post.thumbnail_url);
+                if (thumbnailPath) dbFilePaths.add(thumbnailPath);
+            });
 
             // Find orphaned files
             const orphanedFiles = storageFiles.filter(file => 
-                !dbFilePaths.has(`posts/${file.name}`)
+                !dbFilePaths.has(file.storage_path)
             );
 
             // Calculate total storage used
@@ -1492,7 +1612,7 @@ class GSS_Marketplace {
         
         container.innerHTML = orphanedFiles.slice(0, 10).map(file => `
             <div class="orphan-item">
-                <span>posts/${file.name}</span>
+                <span>${file.storage_path}</span>
                 <span>${this.formatFileSize(file.metadata?.size || 0)}</span>
             </div>
         `).join('');
@@ -1530,7 +1650,7 @@ class GSS_Marketplace {
             
             for (let i = 0; i < this.orphanedFiles.length; i += batchSize) {
                 const batch = this.orphanedFiles.slice(i, i + batchSize);
-                const filePaths = batch.map(file => `posts/${file.name}`);
+                const filePaths = batch.map(file => file.storage_path);
                 
                 const { error } = await this.supabase.storage
                     .from('post-images')
