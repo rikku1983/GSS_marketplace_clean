@@ -7,6 +7,7 @@ class GSS_Marketplace {
         // Photo upload state
         this.uploadedPhotos = [];
         this.editUploadedPhotos = [];
+        this.removedEditPhotoIds = [];
         this.thumbnailIndex = 0;
         this.editThumbnailIndex = 0;
         this.isUploading = false;
@@ -949,6 +950,7 @@ class GSS_Marketplace {
             }
 
             const currentThumbnailPath = this.getStoragePathFromPublicUrl(post.thumbnail_url);
+            this.removedEditPhotoIds = [];
 
             // Convert existing photos to the format expected by the upload system
             this.editUploadedPhotos = (photos || []).map(photo => ({
@@ -1027,7 +1029,17 @@ class GSS_Marketplace {
 
             if (updateError) throw updateError;
 
-            // Don't delete existing photos - just update the display_order to reflect new order
+            if (this.removedEditPhotoIds.length > 0) {
+                const { error: deleteRemovedPhotosError } = await this.supabase
+                    .from('post_images')
+                    .delete()
+                    .eq('post_id', parseInt(postId))
+                    .in('image_id', this.removedEditPhotoIds);
+
+                if (deleteRemovedPhotosError) throw deleteRemovedPhotosError;
+            }
+
+            // Update remaining existing photos and insert newly uploaded photos
             if (this.editUploadedPhotos.length > 0) {
                 for (let i = 0; i < this.editUploadedPhotos.length; i++) {
                     const photo = this.editUploadedPhotos[i];
@@ -1427,35 +1439,44 @@ class GSS_Marketplace {
         const photos = mode === 'create' ? this.uploadedPhotos : this.editUploadedPhotos;
         const photo = photos[index];
 
+        if (!photo) return;
+
+        if (mode === 'edit' && photo.id && !this.removedEditPhotoIds.includes(photo.id)) {
+            this.removedEditPhotoIds.push(photo.id);
+        }
+
         try {
-            // Delete from Supabase Storage
-            const { error } = await this.supabase.storage
-                .from('post-images')
-                .remove([photo.path, photo.thumbnailPath].filter(Boolean));
+            if (!photo.id) {
+                const { error } = await this.supabase.storage
+                    .from('post-images')
+                    .remove([photo.path, photo.thumbnailPath].filter(Boolean));
 
-            if (error) throw error;
-
-            // Remove from array
-            photos.splice(index, 1);
-
-            // Adjust thumbnail index
-            if (mode === 'create') {
-                if (this.thumbnailIndex >= index && this.thumbnailIndex > 0) {
-                    this.thumbnailIndex--;
-                }
-            } else {
-                if (this.editThumbnailIndex >= index && this.editThumbnailIndex > 0) {
-                    this.editThumbnailIndex--;
+                if (error) {
+                    console.warn('Storage cleanup failed for unsaved photo:', error);
                 }
             }
-
-            this.updatePhotoPreview(mode);
-            this.showNotification('Photo removed', 'success');
-
         } catch (error) {
-            console.error('Remove photo error:', error);
-            this.showNotification('Failed to remove photo', 'error');
+            console.warn('Storage cleanup failed for removed photo:', error);
         }
+
+        // Remove from array
+        photos.splice(index, 1);
+
+        // Adjust thumbnail index
+        if (mode === 'create') {
+            if (this.thumbnailIndex >= index && this.thumbnailIndex > 0) {
+                this.thumbnailIndex--;
+            }
+        } else {
+            if (this.editThumbnailIndex >= photos.length) {
+                this.editThumbnailIndex = Math.max(0, photos.length - 1);
+            } else if (this.editThumbnailIndex >= index && this.editThumbnailIndex > 0) {
+                this.editThumbnailIndex--;
+            }
+        }
+
+        this.updatePhotoPreview(mode);
+        this.showNotification('Photo removed', 'success');
     }
 
     // Show/hide upload progress
@@ -1495,6 +1516,7 @@ class GSS_Marketplace {
             this.thumbnailIndex = 0;
         } else {
             this.editUploadedPhotos = [];
+            this.removedEditPhotoIds = [];
             this.editThumbnailIndex = 0;
         }
         this.updatePhotoPreview(mode);
